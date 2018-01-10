@@ -1,4 +1,6 @@
 # Byte-compiled / optimized / DLL files
+credential.config
+tickets.config
 __pycache__/
 *.py[cod]
 *$py.class
