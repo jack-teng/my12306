@@ -3,6 +3,15 @@
 
 stationInfoUrl = 'https://kyfw.12306.cn/otn/resources/js/framework/station_name.js?station_version=1.9018'
 
+loginUrl1 = "https://kyfw.12306.cn/passport/web/login"
+loginUrl2 = "https://kyfw.12306.cn/otn/login/userLogin"
+#getUserLoginUrl = "https://kyfw.12306.cn/otn/passport?redirect=/otn/login/userLogin"
+getUserLoginUrl = "https://kyfw.12306.cn/otn/login/userLogin"
+
+
+uamtkUrl = "https://kyfw.12306.cn/passport/web/auth/uamtk"
+uamauthclientUrl = "https://kyfw.12306.cn/otn/uamauthclient"
+
 # GET
 # headers:
 # Cache-Control: no-cache
@@ -212,3 +221,5 @@ payOrderInitUrl = 'https://kyfw.12306.cn/otn//payOrder/init?random=1515558537928
 #
 # resp: {"validateMessagesShowId":"_validatorMessage","status":true,"httpstatus":200,"data":{"cancelStatus":true},"messages":[],"validateMessages":{}}
 cancelOrderUrl = 'https://kyfw.12306.cn/otn/payOrder/cancel'
+
+logoutUrl = "https://kyfw.12306.cn/otn/login/loginOut"

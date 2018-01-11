@@ -31,6 +31,7 @@ class LoginTic(object):
             "Connection": "keep-alive",
             "Host":"kyfw.12306.cn",
             "User-Agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.115 Safari/537.36"
+            #"Mozilla/5.0 (Macintosh; Intel Mac OS X 10.13; rv:57.0) Gecko/20100101 Firefox/57.0"
         }
         # 创建一个网络请求session实现登录验证
         self.session = requests.session()
@@ -109,7 +110,6 @@ class LoginTic(object):
         # pwd = raw_input('Please input your password:')
         # 输入的内容不显示，但是会接收，一般用于密码隐藏
         #pwd = getpass.getpass('Please input your password:')
-        loginUrl = "https://kyfw.12306.cn/passport/web/login"
         data = {
             'username':username,
             'password':password,
@@ -117,9 +117,13 @@ class LoginTic(object):
         }
         loginHeaders = self.headers
         loginHeaders['Refer'] = 'https://kyfw.12306.cn/otn/login/init'
-        result = self.session.post(url=loginUrl,data=data,headers=self.headers,verify=False)
+        result = self.session.post(url=loginUrl1,data=data,headers=loginHeaders,verify=False)
         print "Login response code: %s" % result.status_code
         #print "Login response: %s" % result.content
+
+        if not self.authLogin():
+            return False
+
         dic = loads(result.content)
         mes = dic['result_message']
         # 结果的编码方式是Unicode编码，所以对比的时候字符串前面加u,或者mes.encode('utf-8') == '登录成功'进行判断，否则报错
@@ -127,6 +131,88 @@ class LoginTic(object):
             return True
         else:
             return dic['result_code']
+
+    def authLogin(self):
+        try:
+            headers = self.headers
+            headers['Host'] = 'kyfw.12306.cn'
+            headers['Accept'] = """text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"""
+            headers["Accept-Language"] = "zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2"
+            headers["Accept-Encoding"] = "gzip, deflate, br"
+            headers["Referer"] =  "https://kyfw.12306.cn/otn/leftTicket/init"
+            headers['Content-Type'] = """application/x-www-form-urlencoded; charset=UTF-8"""
+            headers['DNT'] = '1'
+            headers["Connection"] = "keep-alive"
+            headers['Upgrade-Insecure-Requests'] = "1"
+            result = self.session.post(url=loginUrl2,data={"_json_att":""},headers=headers,verify=False)
+            #print "POST userLogin result: %s" % result2.content
+            print "POST userLogin end"
+
+            headers = self.headers
+            headers['Host'] = 'kyfw.12306.cn'
+            headers['Accept'] = "application/json, text/javascript, */*; q=0.01"
+            headers["Accept-Language"] = "zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2"
+            headers["Accept-Encoding"] = "gzip, deflate, br"
+            headers["Referer"] = "https://kyfw.12306.cn/otn/passport?redirect=/otn/login/userLogin"
+            headers['Content-Type'] = """application/x-www-form-urlencoded; charset=UTF-8"""
+            headers["X-Requested-With"] = "XMLHttpRequest"
+            headers['DNT'] = '1'
+            headers["Connection"] = "keep-alive"
+            result = self.session.post(url=uamtkUrl,data={"appid":"otn"},headers=headers,verify=False)
+            # response: "text": "{\"result_message\":\"验证通过\",\"result_code\":0,\"apptk\":null,
+            # \"newapptk\":\"_wZaQiNV_aMnAu4_LBlZBHefCkOBjVEt3yqzHzpg9Bsbcs1s0\"}"
+            newapptk = loads(result.content)['newapptk'] #newapptk
+            print "POST uamtk end: %s" % newapptk
+
+            headers = self.headers
+            headers['Host'] = 'kyfw.12306.cn'
+            headers['Accept'] =  "*/*"
+            headers["Accept-Language"] = "zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2"
+            headers["Accept-Encoding"] = "gzip, deflate, br"
+            headers["Referer"] = "https://kyfw.12306.cn/otn/passport?redirect=/otn/login/userLogin"
+            headers['Content-Type'] = "application/x-www-form-urlencoded; charset=UTF-8"
+            headers["X-Requested-With"] = "XMLHttpRequest"
+            headers['DNT'] = '1'
+            headers["Connection"] = "keep-alive"
+            #"text": "tk=_wZaQiNV_aMnAu4_LBlZBHefCkOBjVEt3yqzHzpg9Bsbcs1s0"
+            result = self.session.post(url=uamauthclientUrl,data={"tk":newapptk},headers=headers,verify=False)
+            result_code = -1
+            try:
+                result_code = loads(result.content)['result_code']
+            except Exception, e:
+                print "Failed to get result code: %s" % e
+            print "POST uamauthclien end, result code: %s" % result_code
+
+            #getUserLoginUrl
+            headers = self.headers
+            headers['Host'] = 'kyfw.12306.cn'
+            headers['Accept'] =  "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+            headers["Accept-Language"] = "zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2"
+            headers["Accept-Encoding"] = "gzip, deflate, br"
+            headers["Referer"] = "https://kyfw.12306.cn/otn/passport?redirect=/otn/login/userLogin"
+            headers['DNT'] = '1'
+            headers["Connection"] = "keep-alive"
+            headers['Upgrade-Insecure-Requests'] = "1"
+            result = self.session.post(url=getUserLoginUrl, data={"tk":newapptk},headers=headers,verify=False)
+            print "GET userlogin end"
+            return True
+        except BaseException, e:
+            print "Auth log in failed: %s" % e
+            return False
+
+    def logout(self):
+        headers = self.headers
+        headers['Host'] = 'kyfw.12306.cn'
+        headers['Accept'] = """text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"""
+        headers["Accept-Language"] = "zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2"
+        headers["Accept-Encoding"] = "gzip, deflate, br"
+        headers["Referer"] =  "https://kyfw.12306.cn/otn/leftTicket/init"
+        headers['Content-Type'] = """application/x-www-form-urlencoded; charset=UTF-8"""
+        headers['DNT'] = '1'
+        headers["Connection"] = "keep-alive"
+        headers['Upgrade-Insecure-Requests'] = "1"
+        print "Logging out..."
+        result = self.session.get(url=logoutUrl, headers=headers)
 
     def queryLeftTickets(self):
         #leftTicketUrl = 'https://kyfw.12306.cn/otn/leftTicket/queryZ?leftTicketDTO.train_date=2018-01-16&leftTicketDTO.from_station=CDW&leftTicketDTO.to_station=ESN&purpose_codes=ADULT'
@@ -202,15 +288,18 @@ class LoginTic(object):
             print "余票：　有座－%s张, 无座－%s张" % (withSeatCount, noSeatCount)
 
     def checkUser(self):
-        # Content-Type	application/x-www-form-urlen
-        # DNT: 1
-        # Host: kyfw.12306.cn
-        # If-Modified-Since	0
-        # Referer: https://kyfw.12306.cn/otn/leftTicket/init
         headers = self.headers
-        headers['Content-Type'] = "application/x-www-form-urlencoded; charset=UTF-8"
-        headers['DNT'] = '1'
         headers['Host'] = 'kyfw.12306.cn'
+        headers['Accept'] = "*/*"
+        headers["Accept-Language"] = "zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2"
+        headers["Accept-Encoding"] = "gzip, deflate, br"
+        headers["Referer"] =  "https://kyfw.12306.cn/otn/leftTicket/init"
+        headers['Content-Type'] = "application/x-www-form-urlencoded; charset=UTF-8"
+        headers["If-Modified-Since"] = "0"
+        headers["Cache-Control"] = "no-cache"
+        headers["X-Requested-With"] = "XMLHttpRequest"
+        headers['DNT'] = '1'
+        headers["Connection"] = "keep-alive"
 
         # json:
         # _json_att
@@ -219,12 +308,15 @@ class LoginTic(object):
 
     def submitOrder(self, secretStr, fromName, toName):
         headers = self.headers
-        headers['Accept'] = "*/*"
-        headers['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8'
-        headers['DNT'] = '1'
         headers['Host'] = 'kyfw.12306.cn'
-        #headers['Referer: https://kyfw.12306.cn/otn/leftTicket/init
-        #
+        headers['Accept'] = "*/*"
+        headers["Accept-Language"] = "zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2"
+        headers["Accept-Encoding"] = "gzip, deflate, br"
+        headers["Referer"] =  "https://kyfw.12306.cn/otn/leftTicket/init"
+        headers['Content-Type'] = "application/x-www-form-urlencoded; charset=UTF-8"
+        headers["X-Requested-With"] = "XMLHttpRequest"
+        headers['DNT'] = '1'
+        headers["Connection"] = "keep-alive"
         data = {
             'secretStr': secretStr,
             'train_date': '2018-02-08',
@@ -239,17 +331,24 @@ class LoginTic(object):
 
     def initDc(self):
         headers = self.headers
-        headers['Accept'] = """text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"""
-        headers['Content-Type'] = """application/x-www-form-urlencoded"""
-        headers['Upgrade-Insecure-Requests'] = "1"
-        headers['DNT'] = '1'
         headers['Host'] = 'kyfw.12306.cn'
-        # Referer: https://kyfw.12306.cn/otn/leftTicket/init
+        headers['Accept'] = """text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"""
+        headers["Accept-Language"] = "zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2"
+        headers["Accept-Encoding"] = "gzip, deflate, br"
+        headers["Referer"] =  "https://kyfw.12306.cn/otn/leftTicket/init"
+        headers['Content-Type'] = """application/x-www-form-urlencoded; charset=UTF-8"""
+        headers['DNT'] = '1'
+        headers["Connection"] = "keep-alive"
+        headers['Upgrade-Insecure-Requests'] = "1"
         #
         # json _json_att
         result = self.session.post(url=initDcUrl, data={'_json_att':''}, headers=headers, verify=False)
         # var globalRepeatSubmitToken = '7100381b00696bc94607092cbeb28167';
-        repeatSubmitToken = re.search("var globalRepeatSubmitToken = '(.*?)';", result.content)
+        repeatSubmitToken = ""
+        m = re.search("var globalRepeatSubmitToken = '(.*?)';", result.content)
+        #print "initdc result: %s" % result.content
+        if m:
+            repeatSubmitToken = m.group(1)
         print "repeat submit token: %s" % repeatSubmitToken
         return repeatSubmitToken
 
@@ -306,13 +405,15 @@ class LoginTic(object):
             '_json_att': '',
             'REPEAT_SUBMIT_TOKEN': repeatSubmitToken
         }
-        result = self.session.post(url=getQueueCountUrl, data=data, headers=headers, verify=False)
-        print "get queue count result: %s" % result.content
         # resp: {"validateMessagesShowId":"_validatorMessage","status":true,"httpstatus":200,
         # "data":{"count":"0","ticket":"27,144","op_2":"false","countT":"0","op_1":"false"},"messages":[],"validateMessages":{}}
         ticketsCount = (0,0)
-        try:
+        dict = loads(result.content)
+        while not dict['status']:
+            result = self.session.post(url=getQueueCountUrl, data=data, headers=headers, verify=False)
+            print "get queue count result: %s" % result.content
             dict = loads(result.content)
+        try:
             data = dict['data']
             tickets = data['ticket'].split(',')
             ticketsCount = (tickets[0], tickets[1])
@@ -344,7 +445,7 @@ def parseConfigs():
         username = creds['user_name']
         password = creds['password']
 
-def loopCheckCaptcha():
+def loopCheckCaptcha(login):
     chek = False
     #只有验证成功后才能执行登录操作
     while not chek:
@@ -354,7 +455,7 @@ def loopCheckCaptcha():
         else:
             print '验证失败，请重新验证!'
 
-def loopLogin():
+def loopLogin(login):
     loginResult = False
     try:
         loginResult = login.loginTo()
@@ -362,8 +463,12 @@ def loopLogin():
         pass
     print "login result: %s" % loginResult
     while True != loginResult:
+        try:
+            login.logout()
+        except BaseException, e:
+            pass
         if "5" == loginResult:
-            loopCheckCaptcha()
+            loopCheckCaptcha(login)
         else:
             print '登录失败，try again 2 seconds later!'
 
@@ -375,18 +480,24 @@ def loopLogin():
             pass
         print "login result: %s" % loginResult
 
+
 if __name__ == '__main__':
     parseConfigs()
     login = LoginTic()
     login.getImg()
-    loopCheckCaptcha()
+    loopCheckCaptcha(login)
 
-    loopLogin()
-    print '恭喜你，登录成功，可以购票!'
-    leftTickets = login.queryLeftTickets()
-    while len(leftTickets) < 1:
-        print '查询余票失败，try again 2 seconds later!'
-        time.sleep(2)
+    loopLogin(login)
+    try:
+        print '恭喜你，登录成功，可以购票!'
         leftTickets = login.queryLeftTickets()
+        while len(leftTickets) < 1:
+            print '查询余票失败，try again 2 seconds later!'
+            time.sleep(2)
+            leftTickets = login.queryLeftTickets()
 
-    login.handleLeftTickets(leftTickets)
+        login.handleLeftTickets(leftTickets)
+    except BaseException, e:
+        print "Failure: %s" % e
+    finally:
+        login.logout()

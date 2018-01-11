@@ -1,3 +1,27 @@
+post https://kyfw.12306.cn/passport/captcha/captcha-check
+post https://kyfw.12306.cn/passport/web/login
+post https://kyfw.12306.cn/otn/login/userLogin
+get https://kyfw.12306.cn/otn/passport?redirect=/otn/login/userLogin
+post https://kyfw.12306.cn/passport/web/auth/uamtk
+post https://kyfw.12306.cn/otn/uamauthclient
+get https://kyfw.12306.cn/otn/login/userLogin
+get https://kyfw.12306.cn/otn/index/initMy12306
+get https://kyfw.12306.cn/otn/leftTicket/init
+// end of login
+
+get https://kyfw.12306.cn/otn/leftTicket/log?leftTicketDTO.train_date=2018-02-08&leftTicketDTO.from_station=CDW&leftTicketDTO.to_station=ESN&purpose_codes=ADULT
+get https://kyfw.12306.cn/otn/leftTicket/queryZ?leftTicketDTO.train_date=2018-02-08&leftTicketDTO.from_station=CDW&leftTicketDTO.to_station=ESN&purpose_codes=ADULT
+post https://kyfw.12306.cn/otn/login/checkUser
+post https://kyfw.12306.cn/otn/leftTicket/submitOrderRequest
+post https://kyfw.12306.cn/otn/confirmPassenger/initDc
+post https://kyfw.12306.cn/otn/confirmPassenger/getPassengerDTOs
+post https://kyfw.12306.cn/otn/confirmPassenger/checkOrderInfo
+post https://kyfw.12306.cn/otn/confirmPassenger/getQueueCount
+post https://kyfw.12306.cn/otn/confirmPassenger/confirmSingleForQueue
+get https://kyfw.12306.cn/otn/confirmPassenger/queryOrderWaitTime?random=1515663658830&tourFlag=dc&_json_att=&REPEAT_SUBMIT_TOKEN=581c6aabe3f8085d048eba6373dee66f
+post https://kyfw.12306.cn/otn/confirmPassenger/resultOrderForDcQueue
+post https://kyfw.12306.cn/otn//payOrder/init?random=1515663663146
+
 GET https://kyfw.12306.cn/otn/leftTicket/log?leftTicketDTO.train_date=2018-02-08&leftTicketDTO.from_station=CDW&leftTicketDTO.to_station=ESN&purpose_codes=ADULT
 GET https://kyfw.12306.cn/otn/leftTicket/queryZ?leftTicketDTO.train_date=2018-02-08&leftTicketDTO.from_station=CDW&leftTicketDTO.to_station=ESN&purpose_codes=ADULT
 POST https://kyfw.12306.cn/otn/login/checkUser
