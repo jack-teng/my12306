@@ -19,8 +19,10 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 configs = {}
 username = ''
 password = ''
-fromStation = ''
-toStation = ''
+fromStationCode = ''
+toStationCode = ''
+fromStationName = ''
+toStationName = ''
 
 # 由于12306官方验证码是验证正确验证码的坐标范围,我们取每个验证码中点的坐标(大约值)
 captchaCoords = ['35,35','105,35','175,35','245,35','35,105','105,105','175,105','245,105']
@@ -39,6 +41,8 @@ class LoginTic(object):
     # 获取验证码图片
     def getImg(self):
         url = "https://kyfw.12306.cn/passport/captcha/captcha-image?login_site=E&module=login&rand=sjrand";
+        #https://kyfw.12306.cn/passport/captcha/captcha-image?login_site=E&module=login&rand=sjrand&0.5968060550787435
+        #https://kyfw.12306.cn/passport/captcha/captcha-image?login_site=E&module=login&rand=sjrand&0.7769218471372233
         response = self.session.get(url=url,headers=self.headers,verify=False)
         # 把验证码图片保存到本地
         with open('img.jpg','wb') as f:
@@ -115,22 +119,38 @@ class LoginTic(object):
             'password':password,
             'appid':'otn'
         }
-        loginHeaders = self.headers
-        loginHeaders['Refer'] = 'https://kyfw.12306.cn/otn/login/init'
-        result = self.session.post(url=loginUrl1,data=data,headers=loginHeaders,verify=False)
-        print "Login response code: %s" % result.status_code
-        #print "Login response: %s" % result.content
+        headers = self.headers
+        headers['Host'] = 'kyfw.12306.cn'
+        headers['Accept'] = "application/json, text/javascript, */*; q=0.01"
+        headers["Accept-Language"] = "en-US,en;q=0.5"
+        headers["Accept-Encoding"] = "gzip, deflate, br"
+        headers["Referer"] =  "https://kyfw.12306.cn/otn/leftTicket/init"
+        headers['Content-Type'] = """application/x-www-form-urlencoded; charset=UTF-8"""
+        headers['X-Requested-With'] = 'XMLHttpRequest'
+        headers['DNT'] = '1'
+        headers["Connection"] = "keep-alive"
+        result = self.session.post(url=loginUrl1,data=data,headers=headers,verify=False)
+        print "登录返回码: %s" % result.status_code
 
-        if not self.authLogin():
+        try:
+            dic = loads(result.content)
+            #mes = dic['result_message']
+            result_code = dic['result_code']
+            # 结果的编码方式是Unicode编码，所以对比的时候字符串前面加u,或者mes.encode('utf-8') == '登录成功'进行判断，否则报错
+            # {"result_message":"登录成功","result_code":0,"uamtk":"LecrN-dNoDcvRT_xkOcDXsjnPr2q2joCMDyAk6OtRnwkos2s0"}
+            #if mes == u'登录成功':
+            if 0 == result_code:
+                return True
+            else:
+                print "[*]登录失败: %s" % result.content
+                return dic['result_code']
+        except Exception, e:
+            try:
+                print "[*]登录失败: %s" % result.content
+            except:
+                pass
+            print "[*]登录异常: %s" % e
             return False
-
-        dic = loads(result.content)
-        mes = dic['result_message']
-        # 结果的编码方式是Unicode编码，所以对比的时候字符串前面加u,或者mes.encode('utf-8') == '登录成功'进行判断，否则报错
-        if mes == u'登录成功':
-            return True
-        else:
-            return dic['result_code']
 
     def authLogin(self):
         try:
@@ -161,7 +181,14 @@ class LoginTic(object):
             result = self.session.post(url=uamtkUrl,data={"appid":"otn"},headers=headers,verify=False)
             # response: "text": "{\"result_message\":\"验证通过\",\"result_code\":0,\"apptk\":null,
             # \"newapptk\":\"_wZaQiNV_aMnAu4_LBlZBHefCkOBjVEt3yqzHzpg9Bsbcs1s0\"}"
-            newapptk = loads(result.content)['newapptk'] #newapptk
+            result_code = loads(result.content)['result_code']
+            while 0 != result_code:
+                print "%s" % result.content
+                print "Get apptk failed: %s, try agian 2 seconds later" % result_code
+                time.sleep(2)
+                result = self.session.post(url=uamtkUrl,data={"appid":"otn"},headers=headers,verify=False)
+                result_code = loads(result.content)['result_code']
+            newapptk = loads(result.content)['newapptk']
             print "POST uamtk end: %s" % newapptk
 
             headers = self.headers
@@ -197,7 +224,7 @@ class LoginTic(object):
             print "GET userlogin end"
             return True
         except BaseException, e:
-            print "Auth log in failed: %s" % e
+            print "Auth login failed: %s" % e
             return False
 
     def logout(self):
@@ -215,21 +242,18 @@ class LoginTic(object):
         result = self.session.get(url=logoutUrl, headers=headers)
 
     def queryLeftTickets(self):
-        #leftTicketUrl = 'https://kyfw.12306.cn/otn/leftTicket/queryZ?leftTicketDTO.train_date=2018-01-16&leftTicketDTO.from_station=CDW&leftTicketDTO.to_station=ESN&purpose_codes=ADULT'
         global configs
-        global fromStation
-        global toStation
-        print "from %s to %s" % (fromStation, toStation)
+        global fromStationCode
+        global toStationCode
         args = {
                 'leftTicketDTO.train_date':configs['depart_date'],
-                'leftTicketDTO.from_station':fromStation,
-                'leftTicketDTO.to_station':toStation,
+                'leftTicketDTO.from_station':fromStationCode,
+                'leftTicketDTO.to_station':toStationCode,
                 'purpose_codes': 'ADULT'
                }
-        #leftTicketUrl = '?leftTicketDTO.train_date=2018-01-16&leftTicketDTO.from_station=CDW&leftTicketDTO.to_station=ESN&purpose_codes=ADULT'
         arglist = ['leftTicketDTO.train_date=' + configs['depart_date'],
-                   'leftTicketDTO.from_station=' + fromStation,
-                   'leftTicketDTO.to_station=' + toStation,
+                   'leftTicketDTO.from_station=' + fromStationCode,
+                   'leftTicketDTO.to_station=' + toStationCode,
                    'purpose_codes=ADULT'
                     ]
         leftTicketUrl = getLeftTicketsUrl + "?" + '&'.join(arglist)
@@ -284,7 +308,7 @@ class LoginTic(object):
             self.submitOrder(seceret, STATIONS[fields[6]]['name'], STATIONS[fields[7]]['name'])
             repeatSubmitToken = self.initDc()
             self.getPassengers(repeatSubmitToken)
-            withSeatCount, noSeatCount = self.getQueueCount(trainNo, fields[3], fields[15], fromStation, toStation, leftTicket, repeatSubmitToken)
+            withSeatCount, noSeatCount = self.getQueueCount(trainNo, fields[3], fields[15], fromStationCode, toStationCode, leftTicket, repeatSubmitToken)
             print "余票：　有座－%s张, 无座－%s张" % (withSeatCount, noSeatCount)
 
     def checkUser(self):
@@ -387,7 +411,7 @@ class LoginTic(object):
         result = self.session.post(url=checkOrderInfoUrl, data=data, headers=headers, verify=False)
         print "check order info result: %s" % result.content
 
-    def getQueueCount(self, trainNo, trainCode, trainLocation, fromStation, toStation, leftTicketStr, repeatSubmitToken):
+    def getQueueCount(self, trainNo, trainCode, trainLocation, fromStationCode, toStationCode, leftTicketStr, repeatSubmitToken):
         headers = self.headers
         headers['Content-Type'] = "application/x-www-form-urlencoded; charset=UTF-8"
         headers['DNT'] = '1'
@@ -397,8 +421,8 @@ class LoginTic(object):
             'train_no': trainNo,
             'stationTrainCode': trainCode,
             'seatType': 'O',
-            'fromStationTelecode': fromStation,
-            'toStationTelecode': toStation,
+            'fromStationCodeTelecode': fromStationCode,
+            'toStationCodeTelecode': toStationCode,
             'leftTicket': leftTicketStr,
             'purpose_codes': '00',
             'train_location': trainLocation,
@@ -408,11 +432,21 @@ class LoginTic(object):
         # resp: {"validateMessagesShowId":"_validatorMessage","status":true,"httpstatus":200,
         # "data":{"count":"0","ticket":"27,144","op_2":"false","countT":"0","op_1":"false"},"messages":[],"validateMessages":{}}
         ticketsCount = (0,0)
-        dict = loads(result.content)
-        while not dict['status']:
+        result = None
+        dict = {}
+        try:
             result = self.session.post(url=getQueueCountUrl, data=data, headers=headers, verify=False)
-            print "get queue count result: %s" % result.content
             dict = loads(result.content)
+        except:
+            pass
+        while not dict['status']:
+            print "[*]查询余票失败: %s, 2秒后重试" % result.content
+            time.sleep(2)
+            try:
+                result = self.session.post(url=getQueueCountUrl, data=data, headers=headers, verify=False)
+                dict = loads(result.content)
+            except:
+                pass
         try:
             data = dict['data']
             tickets = data['ticket'].split(',')
@@ -421,21 +455,24 @@ class LoginTic(object):
             print "get queue count failed, error: %s" % e
         return ticketsCount
 
-
 def parseConfigs():
     global configs
     global username
     global password
-    global fromStation
-    global toStation
+    global fromStationCode
+    global toStationCode
+    global fromStationName
+    global toStationName
     configFile = './tickets.config'
     with open(configFile, 'r') as f:
         configs = load(f)
         #configs = loads(f.read().decode("utf-8"))
         print u"configs: %s" % configs
     try:
-        fromStation = STATIONS[configs['from_station']]['code']
-        toStation   = STATIONS[configs['to_station']]['code']
+        fromStationCode = STATIONS[configs['from_station']]['code']
+        toStationCode   = STATIONS[configs['to_station']]['code']
+        fromStationName = STATIONS[configs['from_station']]['name']
+        toStationName   = STATIONS[configs['to_station']]['name']
     except BaseException, e:
         print "车站名错误: %s" % e
         sys.exit(-1)
@@ -444,6 +481,7 @@ def parseConfigs():
         creds = load(f)
         username = creds['user_name']
         password = creds['password']
+    print u"从 %s 到 %s" % (fromStationName, toStationName)
 
 def loopCheckCaptcha(login):
     chek = False
@@ -479,25 +517,37 @@ def loopLogin(login):
         except:
             pass
         print "login result: %s" % loginResult
-
+    while not login.authLogin():
+        print "[*]验证登录失败, 2秒后重试..."
+        time.sleep(2)
 
 if __name__ == '__main__':
     parseConfigs()
     login = LoginTic()
     login.getImg()
+    print "[*]处理验证码..."
     loopCheckCaptcha(login)
 
+    print "[*]登录..."
     loopLogin(login)
-    try:
-        print '恭喜你，登录成功，可以购票!'
-        leftTickets = login.queryLeftTickets()
-        while len(leftTickets) < 1:
-            print '查询余票失败，try again 2 seconds later!'
-            time.sleep(2)
-            leftTickets = login.queryLeftTickets()
+    print '[*]登录成功!'
+    print "[*]查询余票..."
 
+    leftTickets = []
+    try:
+        leftTickets = login.queryLeftTickets()
+    except:
+        pass
+    while len(leftTickets) < 1:
+        print '查询余票失败，try again 2 seconds later!'
+        time.sleep(2)
+        try:
+            leftTickets = login.queryLeftTickets()
+        except BaseException, e:
+            print "[*]错误: %s" % e.toString()
+    try:
         login.handleLeftTickets(leftTickets)
     except BaseException, e:
-        print "Failure: %s" % e
+        print "[*]购票失败"
     finally:
         login.logout()
