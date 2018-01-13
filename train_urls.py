@@ -185,7 +185,8 @@ confirmOrderUrl = 'https://kyfw.12306.cn/otn/confirmPassenger/confirmSingleForQu
 # refer: https://kyfw.12306.cn/otn/confirmPassenger/initDc
 # resp: {"validateMessagesShowId":"_validatorMessage","status":true,"httpstatus":200,"data":{"queryOrderWaitTimeStatus":true,"count":0,"waitTime":4,"requestId":6356713219127279176,"waitCount":0,"tourFlag":"dc","orderId":null},"messages":[],"validateMessages":{}}
 # resp: {"validateMessagesShowId":"_validatorMessage","status":true,"httpstatus":200,"data":{"queryOrderWaitTimeStatus":true,"count":0,"waitTime":-1,"requestId":6356713219127279176,"waitCount":0,"tourFlag":"dc","orderId":"E789171113"},"messages":[],"validateMessages":{}}
-queryOrderUrl = 'https://kyfw.12306.cn/otn/confirmPassenger/queryOrderWaitTime?random=1515558533634&tourFlag=dc&_json_att=&REPEAT_SUBMIT_TOKEN=d362cf95cd789ad8773d841a62b28527'
+#queryOrderUrl = 'https://kyfw.12306.cn/otn/confirmPassenger/queryOrderWaitTime?random=1515558533634&tourFlag=dc&_json_att=&REPEAT_SUBMIT_TOKEN=d362cf95cd789ad8773d841a62b28527'
+queryOrderStateUrl = 'https://kyfw.12306.cn/otn/confirmPassenger/queryOrderWaitTime'
 
 # post
 # refer: https://kyfw.12306.cn/otn/confirmPassenger/initDc

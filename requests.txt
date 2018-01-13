@@ -1,3 +1,4 @@
+post https://kyfw.12306.cn/passport/web/auth/uamtk
 post https://kyfw.12306.cn/passport/captcha/captcha-check
 post https://kyfw.12306.cn/passport/web/login
 post https://kyfw.12306.cn/otn/login/userLogin
