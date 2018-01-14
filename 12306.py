@@ -5,6 +5,7 @@ import sys
 from multiprocessing import Process
 import os
 #import psutil
+from datetime import datetime
 import time
 import re
 import urllib
@@ -19,6 +20,9 @@ from train_urls import *
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 # 禁用安全请求警告
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+
+reload(sys)
+sys.setdefaultencoding('utf8')
 
 configs = []
 config = {}
@@ -37,8 +41,9 @@ class Tickets(object):
         self.headers = {
             "Connection": "keep-alive",
             "Host":"kyfw.12306.cn",
-            "User-Agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.115 Safari/537.36"
-            #"Mozilla/5.0 (Macintosh; Intel Mac OS X 10.13; rv:57.0) Gecko/20100101 Firefox/57.0"
+            #"User-Agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.115 Safari/537.36"
+            # user-agent:Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36
+            "User-Agent":"Mozilla/5.0 (Linux; Ubuntu 16.04; rv:57.0) Gecko/20100101 Firefox/57.0"
         }
         # 创建一个网络请求session实现登录验证
         self.session = requests.Session()
@@ -76,7 +81,7 @@ class Tickets(object):
         self.im.close()
 
     def inputPropt(self):
-        print '''
+        print u'''
         #=======================================================================
         # 根据打开的图片识别验证码后手动输入，输入正确验证码对应的位置，例如：2,5
         # ---------------------------------------
@@ -122,7 +127,7 @@ class Tickets(object):
         if str(code) == '4':
             return True
         else:
-            print "[*]检查验证码失败: %s" % response.content
+            print u"[*]检查验证码失败: %s" % response.content
             return False
 
     # 发送登录请求的方法
@@ -149,7 +154,7 @@ class Tickets(object):
         headers['DNT'] = '1'
         headers["Connection"] = "keep-alive"
         response = self.session.post(url=loginUrl1,data=data,headers=headers,verify=False)
-        print "登录返回码: %s" % response.status_code
+        print u"登录返回码: %s" % response.status_code
 
         result_code = "-1"
         try:
@@ -159,13 +164,13 @@ class Tickets(object):
             # {"result_message":"登录成功","result_code":0,"uamtk":"LecrN-dNoDcvRT_xkOcDXsjnPr2q2joCMDyAk6OtRnwkos2s0"}
             #if mes == u'登录成功':
             if "0" != result_code:
-                print "[*]登录失败1: %s" % response.content
-        except Exception, e:
+                print u"[*]登录失败1: %s" % response.content
+        except BaseException, e:
             try:
-                print "[*]登录失败2: %s" % response.content
+                print u"[*]登录失败2: %s" % response.content
             except:
                 pass
-            print "[*]登录异常: %s" % e
+            print u"[*]登录异常: %s" % e
         finally:
             return result_code
 
@@ -200,13 +205,13 @@ class Tickets(object):
             # \"newapptk\":\"_wZaQiNV_aMnAu4_LBlZBHefCkOBjVEt3yqzHzpg9Bsbcs1s0\"}"
             result_code = loads(result.content)['result_code']
             while 0 != result_code:
-                print "%s" % result.content
-                print "Get apptk failed: %s, try agian 2 seconds later" % result_code
+                print u"%s" % result.content
+                print u"Get apptk failed: %s, try agian 2 seconds later" % result_code
                 time.sleep(2)
                 result = self.session.post(url=uamtkUrl,data={"appid":"otn"},headers=headers,verify=False)
                 result_code = loads(result.content)['result_code']
             newapptk = loads(result.content)['newapptk']
-            print "POST uamtk end: %s" % newapptk
+            print u"POST uamtk end: %s" % newapptk
 
             headers = self.headers
             headers['Host'] = 'kyfw.12306.cn'
@@ -223,11 +228,11 @@ class Tickets(object):
             result_code = -1
             try:
                 result_code = loads(response.content)['result_code']
-            except Exception, e:
-                print "post uamauthiclient response: %s" % response.content
-                print "Failed to get result code: %s" % e
-            print "POST uamauthclien end, result code: %s" % result_code
-            print "Cookies after POST uamauthclient: %s" % response.cookies
+            except BaseException, e:
+                print u"post uamauthiclient response: %s" % response.content
+                print u"Failed to get result code: %s" % e
+            print u"POST uamauthclien end, result code: %s" % result_code
+            print u"Cookies after POST uamauthclient: %s" % response.cookies
 
             #getUserLoginUrl
             headers = self.headers
@@ -240,25 +245,11 @@ class Tickets(object):
             headers["Connection"] = "keep-alive"
             headers['Upgrade-Insecure-Requests'] = "1"
             result = self.session.post(url=getUserLoginUrl, data={"tk":newapptk},headers=headers,verify=False)
-            print "GET userlogin end"
+            print u"GET userlogin end"
             return True
         except BaseException, e:
-            print "Auth login failed: %s" % e
+            print u"Auth login failed: %s" % e
             return False
-
-    def logout(self):
-        headers = self.headers
-        headers['Host'] = 'kyfw.12306.cn'
-        headers['Accept'] = """text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"""
-        headers["Accept-Language"] = "zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2"
-        headers["Accept-Encoding"] = "gzip, deflate, br"
-        headers["Referer"] =  "https://kyfw.12306.cn/otn/leftTicket/init"
-        headers['Content-Type'] = """application/x-www-form-urlencoded; charset=UTF-8"""
-        headers['DNT'] = '1'
-        headers["Connection"] = "keep-alive"
-        headers['Upgrade-Insecure-Requests'] = "1"
-        print "Logging out..."
-        result = self.session.get(url=logoutUrl, headers=headers)
 
     def queryLeftTickets(self):
         global config
@@ -281,31 +272,73 @@ class Tickets(object):
                 'leftTicketDTO.to_station':toStationCode,
                 'purpose_codes':'ADULT'
                 }
+        arglist = ['leftTicketDTO.train_date=' + config['depart_date'],
+                   'leftTicketDTO.from_station=' + fromStationCode,
+                   'leftTicketDTO.to_station=' + toStationCode,
+                   'purpose_codes=ADULT'
+                    ]
+        leftTicketUrl = getLeftTicketsUrl + "?" + '&'.join(arglist)
         response = {}
         content  = {}
         status   = False
+        availableTrains = []
+        req = requests.Request('GET', leftTicketUrl, headers=headers)
+        prepped = self.session.prepare_request(req)
+
         try:
             # httpstatus: 200
             # messages:""
             # status: true or false
             # data: {}
-            response = self.session.get(url=getLeftTicketsUrl, params=queryString, headers=headers)
+            #response = self.session.get(url=getLeftTicketsUrl, params=queryString, headers=headers)
+            response = self.session.send(prepped,
+                          #stream=stream,
+                          verify=False,
+                          #proxies=proxies,
+                          #cert=cert,
+                          timeout=10
+                          )
+            #print "查询余票URL: %s" % response.request.url
+            print "查询余票URL: %s" % prepped.url
             content  = loads(response.content)
             status   = content['status']
-        except Exception, e:
-            print "查询余票异常: %s" % e
-        while not status:
+            candidateTrains = content['data']['result']
+            if None != config['train_no'] and '' != config['train_no']:
+                availableTrains = filter(self.trainFilterByNo, candidateTrains)
+            else:
+                availableTrains = candidateTrains
+        except BaseException, e:
+            print u"查询余票异常: %s" % e
+        while len(availableTrains) < 1:
             try:
-                response = self.session.get(url=leftTicketUrl, headers=headers)
+                if not status:
+                    print u"%s" % response.content
+                    print u"[*]查询余票失败, 2秒后重试"
+                else:
+                    print u"[*]没有余票, 2秒后重试"
+                print "查询余票URL: %s" % prepped.url
+                time.sleep(2)
+                #response = self.session.get(url=getLeftTicketsUrl, params=queryString, headers=headers)
+                response = self.session.send(prepped,
+                                             #stream=stream,
+                                             verify=False,
+                                             #proxies=proxies,
+                                             #cert=cert,
+                                             timeout=10
+                                             )
                 content = loads(response.content)
                 status = content['status']
-            except Exception, e:
-                print "查询余票异常: %s" % e
-        candidateTrains = content['data']['result']
-        if None != config['train_no'] and '' != config['train_no']:
-            return filter(self.trainFilterByNo, candidateTrains)
-        else:
-            return candidateTrains
+                candidateTrains = content['data']['result']
+                if None != config['train_no'] and '' != config['train_no']:
+                    availableTrains = filter(self.trainFilterByNo, candidateTrains)
+                else:
+                    availableTrains = candidateTrains
+            except KeyboardInterrupt, e:
+                print u"[*]查询余票中断（%s）" % status
+                return availableTrains
+            except BaseException, e:
+                pass
+        return availableTrains
 
     def trainFilterByNo(self, train):
         global config
@@ -326,10 +359,6 @@ class Tickets(object):
         print u"%3s | %5s | %10s | %10s | %10s | %10s | %10s | %10s" % \
               (u"序号", u"车次", u"出发 - 到达", u"发时 - 到时", u"历时", u"特等座", u"一等座", u"二等座")
         idx = 0
-        # POST https://kyfw.12306.cn/otn/login/checkUser
-        # POST https://kyfw.12306.cn/otn/leftTicket/submitOrderRequest
-        # POST https://kyfw.12306.cn/otn/confirmPassenger/initDc
-        # POST https://kyfw.12306.cn/otn/confirmPassenger/getPassengerDTOs
         self.checkUser()
         for ticket in tickets:
             fields  = ticket.split('|')
@@ -342,19 +371,26 @@ class Tickets(object):
                    STATIONS[fields[6]]['name'] + '-' + STATIONS[fields[7]]['name'], \
                    fields[8] + ' - ' + fields[9], fields[10], \
                    fields[31], fields[31], fields[30])
-            print "[*]创建订单请求..."
+            print u"[*]创建订单请求..."
             self.submitOrder(seceret, STATIONS[fields[6]]['name'], STATIONS[fields[7]]['name'])
             (repeatSubmitToken, keyCheckIsChange) = self.initDc()
             #self.getPassengers(repeatSubmitToken)
-            print "[*]检查订单信息..."
+            print u"[*]检查订单信息..."
             if not self.checkOrderInfo(repeatSubmitToken):
                 continue
+
+            print u"[*]查询余票详情..."
             withSeatCount, noSeatCount = self.getQueueCount(trainNo, fields[3], fields[15], fromStationCode, toStationCode, \
                                                             leftTicketStr, repeatSubmitToken)
-            print "余票：　有座－%s张, 无座－%s张" % (withSeatCount, noSeatCount)
+            print u"余票：　有座－%s张, 无座－%s张" % (withSeatCount, noSeatCount)
+            print u"[*]提交订单..."
             if self.confirmOrder(repeatSubmitToken, keyCheckIsChange, leftTicketStr):
-                self.queryOrderState(repeatSubmitToken)
-                break
+                print u"[*]查询订单号..."
+                if self.queryOrderState(repeatSubmitToken):
+                    return True
+                else:
+                    print u"[*]查询订单号失败，尝试购买下一趟列车..."
+                    continue
 
     def checkUser(self):
         headers = self.headers
@@ -375,7 +411,7 @@ class Tickets(object):
         # resp: {"validateMessagesShowId":"_validatorMessage","status":true,"httpstatus":200,
         # "data":{"flag":true},"messages":[],"validateMessages":{}}
         response = self.session.post(url=checkUserUrl, data={'_json_att':''}, headers=headers, verify=False)
-        print "[*]检查用户结果: %s" % response.content
+        print u"[*]检查用户结果: %s" % response.content
 
     def submitOrder(self, secretStr, fromName, toName):
         global config
@@ -389,7 +425,7 @@ class Tickets(object):
         headers["X-Requested-With"] = "XMLHttpRequest"
         headers['DNT'] = '1'
         headers["Connection"] = "keep-alive"
-        print "submitOrder %s - %s" % (fromName, toName)
+        print u"submitOrder %s - %s" % (fromName, toName)
         data = {
             'secretStr': secretStr,
             'train_date': config['depart_date'],
@@ -405,20 +441,25 @@ class Tickets(object):
         # resp nok: {"validateMessagesShowId":"_validatorMessage","status":false,"httpstatus":200,
         #   "messages":["车票信息已过期，请重新查询最新车票信息"],"validateMessages":{}}
         response = {}
+        status = False
         dict = {}
         try:
             response = self.session.post(url=submitOrderUrl, data=data, headers=headers, verify=False)
-            dict = loads(response.content)
-        except Exception, e:
+            status = loads(response.content)['status']
+        except BaseException, e:
             pass
-        while not dict['status']:
-            print "[*]创建订单请求出错: %s, 2 秒后重试" % response.content
+        while not status:
+            print u"[*]创建订单请求出错: %s, 2 秒后重试" % response.content
             time.sleep(2)
             try:
                 response = self.session.post(url=submitOrderUrl, data=data, headers=headers, verify=False)
-                dict = loads(response.content)
-            except Exception, e:
+                status = loads(response.content)['status']
+            except KeyboardInterrupt, e:
+                print u"[*]创建订单中断（%s）" % status
+                return dict['status']
+            except BaseException, e:
                 pass
+        return status
 
     def initDc(self):
         headers = self.headers
@@ -440,13 +481,13 @@ class Tickets(object):
         m = re.search("var globalRepeatSubmitToken = '(.*?)';", result.content)
         if m:
             repeatSubmitToken = m.group(1)
-        print "repeat submit token: %s" % repeatSubmitToken
+        print u"repeat submit token: %s" % repeatSubmitToken
         keyCheckIsChange = ""
         # 'key_check_isChange':'A0B67C6693D70DCE0533B140D45E53299C95C802D05CEAE752CE896B',
         m = re.search("'key_check_isChange'\s*:\s*'(.*?)'.*?,", result.content)
         if m:
             keyCheckIsChange = m.group(1)
-        print "key_check_isChange: %s" % keyCheckIsChange
+        print u"key_check_isChange: %s" % keyCheckIsChange
         #              'leftTicketStr':'ByyR5GeiUJIZgGro5zy%2BL2ayYMYQiHVq7Nnep10Qkz5wTxuUjhAoprybxjo%3D',
         leftTicketStr = ""
         return (repeatSubmitToken, keyCheckIsChange)
@@ -551,29 +592,29 @@ class Tickets(object):
         # {"validateMessagesShowId":"_validatorMessage","status":true,"httpstatus":200,
         # "data":{"checkSeatNum":true,"errMsg":"您选择了1位乘车人，但本次列车一等座仅剩0张。","submitStatus":false},"messages":[],"validateMessages":{}}
         response = {}
-        dict = {}
+        submitStatus = False
         try:
             response = self.session.post(url=checkOrderInfoUrl, data=data, headers=headers, verify=False)
-            dict = loads(response.content)['data']
+            submitStatus = loads(response.content)['data']['submitStatus']
         except Excepation, e:
             pass
             #print "[*]检查订单信息异常: %s" % e
-        while not dict['submitStatus']:
+        while not submitStatus:
             try:
                 if re.match(r"0张", response.content):
-                    print "\n[*]余票不足: %s, 2秒后重试" % response.content
+                    print u"\n[*]余票不足: %s, 2秒后重试" % response.content
                 else:
-                    print "[*]检查订单信息失败: %s, 2秒后重试" % response.content
-                print "\n[*]Press Ctrl + C to stop\n"
+                    print u"[*]检查订单信息失败: %s, 2秒后重试" % response.content
+                print u"\n[*]Press Ctrl + C to stop\n"
                 time.sleep(2)
                 response = self.session.post(url=checkOrderInfoUrl, data=data, headers=headers, verify=False)
-                dict = loads(response.content)['data']
+                submitStatus = loads(response.content)['data']['submitStatus']
             except KeyboardInterrupt, e:
-                print "[*]中断检查（%s）" % dict['submitStatus']
-                return dict['submitStatus']
+                print u"[*]中断检查（%s）" % submitStatus
+                return submitStatus
             except Excepation, e:
                 pass
-        return dict['submitStatus']
+        return submitStatus
 
     def getQueueCount(self, trainNo, trainCode, trainLocation, fromStationCode, toStationCode, leftTicketStr, repeatSubmitToken):
         headers = self.headers
@@ -586,8 +627,11 @@ class Tickets(object):
         headers["X-Requested-With"] = "XMLHttpRequest"
         headers['DNT'] = '1'
         headers["Connection"] = "keep-alive"
+        dt = datetime.strptime(config['depart_date'], "%Y-%m-%d")
+        format = "%a+%b+%d+%Y+%H:%M:%S+GMT+0800+(CST)"
         data = {
-            'train_date': 'Thu+Feb+08+2018+00:00:00+GMT+0800+(CST)',
+            'train_date': dt.strftime(format),
+            #'train_date': 'Thu+Feb+08+2018+00:00:00+GMT+0800+(CST)',
             'train_no': trainNo,
             'stationTrainCode': trainCode,
             'seatType': 'O',
@@ -599,24 +643,53 @@ class Tickets(object):
             '_json_att': '',
             'REPEAT_SUBMIT_TOKEN': repeatSubmitToken
         }
+        req = requests.Request('POST', getQueueCountUrl, headers=headers)
+        #req = requests.Request('POST', getQueueCountUrl, data=data, headers=headers)
+        prepped = self.session.prepare_request(req)
+        #prepped.body = json.dumps(data)
+        body = "_json_att=&stationTrainCode=" + trainCode + "&train_no=" + trainNo + "&leftTicket=" + leftTicketStr + \
+                "&train_location=W1&fromStationCodeTelecode=" + fromStationCode + "&seatType=O&toStationCodeTelecode=" + toStationCode + \
+                "&REPEAT_SUBMIT_TOKEN=" + repeatSubmitToken + \
+                "&train_date=" + dt.strftime("%a+%b+%d+%Y") + "+00%3A00%3A00+GMT%2B0800+(CST)&purpose_codes=00"""
+        prepped.body = body
+        print u"查询余票详情请求数据: %s" % prepped.body
+
         # resp: {"validateMessagesShowId":"_validatorMessage","status":true,"httpstatus":200,
         # "data":{"count":"0","ticket":"27,144","op_2":"false","countT":"0","op_1":"false"},"messages":[],"validateMessages":{}}
         ticketsCount = (0,0)
-        result = None
+        response = None
         dict = {}
+        status = False
         try:
-            result = self.session.post(url=getQueueCountUrl, data=data, headers=headers, verify=False)
-            dict = loads(result.content)
-        except:
-            pass
-        while not dict['status']:
-            print "[*]查询余票失败: %s, 2秒后重试" % result.content
-            time.sleep(2)
+            #response = self.session.send(prepped,
+            #                            #stream=stream,
+            #                            verify=False,
+            #                            #proxies=proxies,
+            #                            #cert=cert,
+            #                            timeout=10
+            #                            )
+            response = self.session.post(url=getQueueCountUrl, data=body, headers=headers, verify=False)
+            dict = loads(response.content)
+            status = dict['status']
+        except BaseException, e:
+            print u"[*]查询余票详情失败: %s" % response
+        while not status:
             try:
-                result = self.session.post(url=getQueueCountUrl, data=data, headers=headers, verify=False)
-                dict = loads(result.content)
+                print u"[*]查询余票详情失败: %s, 2秒后重试" % response.content
+                time.sleep(2)
+                response = self.session.post(url=getQueueCountUrl, data=body, headers=headers, verify=False)
+                #response = self.session.send(prepped,
+                #                             #stream=stream,
+                #                             verify=False,
+                #                             #proxies=proxies,
+                #                             #cert=cert,
+                #                             timeout=10
+                #                             )
+                dict = loads(response.content)
+                status = dict['status']
             except KeyboardInterrupt, e:
-                print "[*]中断检查（%s）" % ticketsCount
+                print u"[*]查询余票详情中断（%s" % ticketsCount
+                break
             except BaseException, e:
                 pass
         try:
@@ -624,7 +697,7 @@ class Tickets(object):
             tickets = data['ticket'].split(',')
             ticketsCount = (tickets[0], tickets[1])
         except BaseException, e:
-            print "get queue count failed, error: %s" % e
+            print u"get queue count failed, error: %s" % e
         return ticketsCount
 
     def confirmOrder(self, repeatSubmitToken, keyCheckIsChange, leftTicketStr):
@@ -656,15 +729,16 @@ class Tickets(object):
             'REPEAT_SUBMIT_TOKEN': repeatSubmitToken
         }
         # resp: {"validateMessagesShowId":"_validatorMessage","status":true,"httpstatus":200,
-        # "data":{"submitStatus":true},"messages":[],"validateMessages":{}}
+        #        "data":{"submitStatus":true},"messages":[],"validateMessages":{}}
         response = ""
         submitStatus = False
         try:
             response = self.session.post(url=confirmOrderUrl, data=data, headers=headers, verify=False)
-            print "[*]提交订单结果：%s" % response.content
-            submitStatus = loads(response.content)['submitStatus']
+            print u"[*]提交订单结果：%s" % response.content
+            submitStatus = loads(response.content)['data']['submitStatus']
         except BaseException, e:
-            print "[*]提交订单出错：%s" % e
+            print u"[*]提交订单结果：%s" % response.content
+            print u"[*]提交订单出错：%s" % e
         return submitStatus
 
     def queryOrderState(self, repeatSubmitToken):
@@ -694,24 +768,40 @@ class Tickets(object):
         # \"data\":{\"queryOrderWaitTimeStatus\":true,\"count\":0,\"waitTime\":-1,\"requestId\":1234567890123456786,
         #           \"waitCount\":0,\"tourFlag\":\"dc\",\"orderId\":\"E123456789\"},\"messages\":[],\"validateMessages\":{}}"
         response = {}
-        data  = {}
+        orderId = None
         try:
             response = self.session.get(url=queryOrderStateUrl, params=queryString, headers=headers)
-            data = loads(response.content)['data']
+            orderId = loads(response.content)['data']['orderId']
         except BaseException, e:
             pass
-        while not data['orderId']:
+        while not orderId:
             try:
-                print "[*]查询订单状态..."
-                time.sleep(2)
+                print u"[*]查询订单状态..."
+                time.sleep(1)
                 response = self.session.get(url=queryOrderStateUrl, params=queryString, headers=headers)
-                data = loads(response.content)['data']
+                orderId = loads(response.content)['data']['orderId']
             except KeyboardInterrupt, e:
-                print "[*]中断查询（%s）" % data
-                return None
+                print u"[*]中断查询（%s）" % response.content
+                return orderId
             except BaseException, e:
                 pass
-        print "[*]订单 [%s] 创建成功!" % data['orderId']
+        print u"[*]订单 [%s] 创建成功!" % orderId
+        return orderId
+
+    def logout(self):
+        headers = self.headers
+        headers['Host'] = 'kyfw.12306.cn'
+        headers['Accept'] = """text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"""
+        headers["Accept-Language"] = "zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2"
+        headers["Accept-Encoding"] = "gzip, deflate, br"
+        headers["Referer"] =  "https://kyfw.12306.cn/otn/leftTicket/init"
+        headers['Content-Type'] = """application/x-www-form-urlencoded; charset=UTF-8"""
+        headers['DNT'] = '1'
+        headers["Connection"] = "keep-alive"
+        headers['Upgrade-Insecure-Requests'] = "1"
+        print u"Logging out..."
+        response = self.session.get(url=logoutUrl, headers=headers)
+
 
 def parseConfigs():
     global configs
@@ -727,10 +817,10 @@ def parseConfigs():
         #print u"configs: %s" % configs
     try:
         if len(configs) < 1:
-            print "[*]请配置购票信息."
+            print u"[*]请配置购票信息."
             sys.exit(-1)
     except BaseException, e:
-        print "车站名错误: %s" % e
+        print u"配置文件错误: %s" % e
         sys.exit(-1)
     credFile = './credential.config'
     with open(credFile, 'r') as f:
@@ -744,9 +834,9 @@ def loopCheckCaptcha(tickets):
     while not chek:
         chek = tickets.checkCaptcha()
         if chek:
-            print '验证通过!'
+            print u'验证通过!'
         else:
-            print '验证失败，请重新验证!'
+            print u'验证失败，请重新验证!'
 
 def loopLogin(tickets):
     loginResult = "-1"
@@ -762,7 +852,7 @@ def loopLogin(tickets):
         if "5" == loginResult:
             loopCheckCaptcha(tickets)
         else:
-            print '登录失败，try again 2 seconds later!'
+            print u'登录失败，try again 2 seconds later!'
 
         time.sleep(2)
         loginResult = False
@@ -775,49 +865,40 @@ if __name__ == '__main__':
     parseConfigs()
     tickets = Tickets()
     tickets.getImg()
-    print "[*]处理验证码...\n"
+    print u"[*]处理验证码...\n"
     loopCheckCaptcha(tickets)
     if tickets.pShowImage:
         tickets.pShowImage.terminate()
 
-    print "[*]登录...\n"
+    print u"[*]登录...\n"
     loopLogin(tickets)
-    print '\n[*]登录成功!\n'
+    print u'\n[*]登录成功!\n'
 
     while not tickets.authLogin():
-        print "[*]验证登录失败, 2秒后重试..."
+        print u"[*]验证登录失败, 2秒后重试..."
         time.sleep(2)
 
-    print '\n[*]开始购票...\n'
+    print u'\n[*]开始购票...\n'
     for (idx, config) in enumerate(configs):
-        #print u"为 %s 购买从 [%s] 到 [%s] 的车票" % (config['passengers'], fromStationName, toStationName)
-        print "[*] %s: 查询余票...\n" % idx
-        if len(config['passengers']) < 1:
-            continue
         fromStationCode = STATIONS[config['from_station']]['code']
         toStationCode   = STATIONS[config['to_station']]['code']
         fromStationName = STATIONS[config['from_station']]['name']
         toStationName   = STATIONS[config['to_station']]['name']
+        print u"[*] %s: 尝试购买 [%s] 日从 [%s] 到 [%s] 的车票..." % (idx, config['depart_date'], fromStationName, toStationName)
+        if len(config['passengers']) < 1:
+            continue
         tickets.getPassengerTicketStr()
-        leftTickets = []
-        try:
-            leftTickets = tickets.queryLeftTickets()
-        except Exception, e:
-            pass
-        while len(leftTickets) < 1:
-            print '查询余票失败，try again 2 seconds later!\n'
-            time.sleep(2)
-            try:
-                leftTickets = tickets.queryLeftTickets()
-            except Exception, e:
-                print "[*]查询余票错误: %s" % e
+        leftTickets = tickets.queryLeftTickets()
+        if len(leftTickets) < 1:
+            print u"[*]购买 [%s] 日从 [%s] 到 [%s] 到车票失败，尝试下一趟列车..." % (config['depart_date'], fromStationName, toStationName)
+            continue
         result = False
         try:
             result = tickets.buyTickets(leftTickets)
         except BaseException, e:
-            print "[*] %s 购票失败: %s, 尝试下一车次\n" % (idx, e)
+            print u"[*] %s 购票失败: %s, 尝试下一车次\n" % (idx, e)
         if result:
-            print "[*]购票成功，请登陆12306网站付款。"
+            print u"[*]购票成功，请登陆12306网站付款。"
             break
 
     tickets.logout()
