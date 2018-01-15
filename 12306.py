@@ -153,6 +153,9 @@ class Tickets(object):
         headers['X-Requested-With'] = 'XMLHttpRequest'
         headers['DNT'] = '1'
         headers["Connection"] = "keep-alive"
+
+              #"name": "Cookie",
+              #"value": "_passport_session=4b36a156b4c34c02a66a9421bed6e7e54948; _passport_ct=0518eda7c9c14750b3d5c09cd789b916t1615; route=6f50b51faa11b987e576cdb301e545c4; BIGipServerotn=451412234.24610.0000; RAIL_EXPIRATION=1515698742622; RAIL_DEVICEID=o4z3H3hVVTNj8gz69EIeou7PWf98U0Dkfp1QG3tQaaX5Bx5-3argENHJReXBQ1IfwJxXFjqekDVuldP7MYtCt96zpXuormq3BuLckqiMYX4gFdrBSm5o7qL-HtxoBYu1PWIqoKo3x1gYzqcryfOURR2c9FVsgHWY; BIGipServerpassport=954728714.50215.0000; current_captcha_type=C; _jc_save_fromStation=%u6210%u90FD%2CCDW; _jc_save_toStation=%u6069%u65BD%2CESN; _jc_save_fromDate=2018-02-08; _jc_save_toDate=2018-01-10; _jc_save_wfdc_flag=dc; _jc_save_showIns=true; _jc_save_czxxcx_toStation=%u6069%u65BD%2CESN; _jc_save_czxxcx_fromDate=2018-02-09"
         response = self.session.post(url=loginUrl1,data=data,headers=headers,verify=False)
         print u"登录返回码: %s" % response.status_code
 
@@ -898,7 +901,7 @@ if __name__ == '__main__':
         except BaseException, e:
             print u"[*] %s 购票失败: %s, 尝试下一车次\n" % (idx, e)
         if result:
-            print u"[*]购票成功，请登陆12306网站付款。"
+            print u"[*]购票成功，请登录12306网站付款。"
             break
 
     tickets.logout()

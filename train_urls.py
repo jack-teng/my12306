@@ -1,6 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+# login init
+loginInitUrl = "https://kyfw.12306.cn/otn/login/init"
 stationInfoUrl = 'https://kyfw.12306.cn/otn/resources/js/framework/station_name.js?station_version=1.9018'
 
 loginUrl1 = "https://kyfw.12306.cn/passport/web/login"
