@@ -3,10 +3,12 @@
 
 import sys
 from multiprocessing import Process
+from fake_useragent import UserAgent
 import os
 #import psutil
 from datetime import datetime
 import time
+import random
 import re
 import urllib
 import requests
@@ -20,6 +22,8 @@ from train_urls import *
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 # 禁用安全请求警告
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+
+ua = UserAgent(verify_ssl=False)
 
 reload(sys)
 sys.setdefaultencoding('utf8')
@@ -43,18 +47,28 @@ class Tickets(object):
             "Host":"kyfw.12306.cn",
             #"User-Agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.115 Safari/537.36"
             # user-agent:Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36
-            "User-Agent":"Mozilla/5.0 (Linux; Ubuntu 16.04; rv:57.0) Gecko/20100101 Firefox/57.0"
+            #"User-Agent":"Mozilla/5.0 (Linux; Ubuntu 16.04; rv:57.0) Gecko/20100101 Firefox/57.0"
+            "User-Agent": ua.random
         }
         # 创建一个网络请求session实现登录验证
         self.session = requests.Session()
         self.pShowImage = None
 
+    def initLogin(self):
+        headers = self.headers
+        #headers['Referer'] = "https://kyfw.12306.cn/otn/leftTicket/init"
+        self.session.get(url=loginInitUrl, headers=headers)
+
     # 获取验证码图片
     def getImg(self):
-        url = "https://kyfw.12306.cn/passport/captcha/captcha-image?login_site=E&module=login&rand=sjrand";
-        #https://kyfw.12306.cn/passport/captcha/captcha-image?login_site=E&module=login&rand=sjrand&0.5968060550787435
-        #https://kyfw.12306.cn/passport/captcha/captcha-image?login_site=E&module=login&rand=sjrand&0.7769218471372233
+        url = "https://kyfw.12306.cn/passport/captcha/captcha-image?login_site=E&module=login&rand=sjrand&" + str(random.random());
         response = self.session.get(url=url,headers=self.headers,verify=False)
+        #try:
+        #    print u"Set-Cookie header of get capcha image response: %s" % response.headers['Set-Cookie']
+        #    print u"Cookies after get capcha image: %s\n" % response.cookies
+        #except BaseException, e:
+        #    print "no cookie info: %s" % e
+        #    pass
         # 把验证码图片保存到本地
         with open('img.jpg','wb') as f:
             f.write(response.content)
@@ -154,9 +168,9 @@ class Tickets(object):
         headers['DNT'] = '1'
         headers["Connection"] = "keep-alive"
 
-              #"name": "Cookie",
-              #"value": "_passport_session=4b36a156b4c34c02a66a9421bed6e7e54948; _passport_ct=0518eda7c9c14750b3d5c09cd789b916t1615; route=6f50b51faa11b987e576cdb301e545c4; BIGipServerotn=451412234.24610.0000; RAIL_EXPIRATION=1515698742622; RAIL_DEVICEID=o4z3H3hVVTNj8gz69EIeou7PWf98U0Dkfp1QG3tQaaX5Bx5-3argENHJReXBQ1IfwJxXFjqekDVuldP7MYtCt96zpXuormq3BuLckqiMYX4gFdrBSm5o7qL-HtxoBYu1PWIqoKo3x1gYzqcryfOURR2c9FVsgHWY; BIGipServerpassport=954728714.50215.0000; current_captcha_type=C; _jc_save_fromStation=%u6210%u90FD%2CCDW; _jc_save_toStation=%u6069%u65BD%2CESN; _jc_save_fromDate=2018-02-08; _jc_save_toDate=2018-01-10; _jc_save_wfdc_flag=dc; _jc_save_showIns=true; _jc_save_czxxcx_toStation=%u6069%u65BD%2CESN; _jc_save_czxxcx_fromDate=2018-02-09"
-        response = self.session.post(url=loginUrl1,data=data,headers=headers,verify=False)
+        #"name": "Cookie",
+        #"value": "_passport_session=4b36a156b4c34c02a66a9421bed6e7e54948; _passport_ct=0518eda7c9c14750b3d5c09cd789b916t1615; route=6f50b51faa11b987e576cdb301e545c4; BIGipServerotn=451412234.24610.0000; RAIL_EXPIRATION=1515698742622; RAIL_DEVICEID=o4z3H3hVVTNj8gz69EIeou7PWf98U0Dkfp1QG3tQaaX5Bx5-3argENHJReXBQ1IfwJxXFjqekDVuldP7MYtCt96zpXuormq3BuLckqiMYX4gFdrBSm5o7qL-HtxoBYu1PWIqoKo3x1gYzqcryfOURR2c9FVsgHWY; BIGipServerpassport=954728714.50215.0000; current_captcha_type=C; _jc_save_fromStation=%u6210%u90FD%2CCDW; _jc_save_toStation=%u6069%u65BD%2CESN; _jc_save_fromDate=2018-02-08; _jc_save_toDate=2018-01-10; _jc_save_wfdc_flag=dc; _jc_save_showIns=true; _jc_save_czxxcx_toStation=%u6069%u65BD%2CESN; _jc_save_czxxcx_fromDate=2018-02-09"
+        response = self.session.post(url=loginUrl1,data=data,headers=self.headers,verify=False)
         print u"登录返回码: %s" % response.status_code
 
         result_code = "-1"
@@ -806,7 +820,7 @@ class Tickets(object):
         response = self.session.get(url=logoutUrl, headers=headers)
 
 
-def parseConfigs():
+def parseConfigs(args):
     global configs
     global username
     global password
@@ -814,7 +828,11 @@ def parseConfigs():
     global toStationCode
     global fromStationName
     global toStationName
-    configFile = './tickets.config'
+    configFile = None
+    if len(args) > 1:
+        configFile = args[1]
+    else:
+        configFile = './tickets.config'
     with open(configFile, 'r') as f:
         configs = load(f)
         #print u"configs: %s" % configs
@@ -865,8 +883,10 @@ def loopLogin(tickets):
             pass
 
 if __name__ == '__main__':
-    parseConfigs()
+    parseConfigs(sys.argv)
     tickets = Tickets()
+    tickets.initLogin()
+
     tickets.getImg()
     print u"[*]处理验证码...\n"
     loopCheckCaptcha(tickets)
@@ -893,7 +913,7 @@ if __name__ == '__main__':
         tickets.getPassengerTicketStr()
         leftTickets = tickets.queryLeftTickets()
         if len(leftTickets) < 1:
-            print u"[*]购买 [%s] 日从 [%s] 到 [%s] 到车票失败，尝试下一趟列车..." % (config['depart_date'], fromStationName, toStationName)
+            print u"[*]购买 [%s] 日从 [%s] 到 [%s] 的车票失败，尝试下一趟列车..." % (config['depart_date'], fromStationName, toStationName)
             continue
         result = False
         try:
