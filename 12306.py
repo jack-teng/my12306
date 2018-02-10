@@ -19,6 +19,7 @@ import json
 from json import loads, load
 import getpass
 from station_consts import STATIONS
+from tabulate import tabulate
 from train_urls import *
 
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
@@ -401,19 +402,19 @@ class Tickets(object):
             cu['is_support_card'] = cq[18]
             cu['controlled_train_flag'] = cq[19]
             cu['gg_num'] = cq[20] if cq[20] else "--"
-            cu['gr_num'] = cq[21] if cq[21] else "--"
-            cu['qt_num'] = cq[22] if cq[22] else "--"
-            cu['rw_num']= cq[23] if cq[23] else "--"
-            cu['rz_num']= cq[24] if cq[24] else "--"
-            cu['tz_num']= cq[25] if cq[25] else "--"
-            cu['wz_num']= cq[26] if cq[26] else "--"
-            cu['yb_num']= cq[27] if cq[27] else "--"
-            cu['yw_num']= cq[28] if cq[28] else "--"
-            cu['yz_num']= cq[29] if cq[29] else "--"
-            cu['ze_num']= cq[30] if cq[30] else "--"
-            cu['zy_num']= cq[31] if cq[31] else "--"
-            cu['swz_num'] = cq[32] if cq[32] else "--"
-            cu['srrb_num'] = cq[33] if cq[33]  else "--"
+            cu['gr_num'] = cq[21] if cq[21] else "--"    # 高级软卧
+            cu['qt_num'] = cq[22] if cq[22] else "--"    # 其他
+            cu['rw_num']= cq[23] if cq[23] else "--"     # 软卧
+            cu['rz_num']= cq[24] if cq[24] else "--"     # 软座
+            cu['tz_num']= cq[25] if cq[25] else "--"     # 特等座
+            cu['wz_num']= cq[26] if cq[26] else "--"     # 无座
+            cu['yb_num']= cq[27] if cq[27] else "--"     # 
+            cu['yw_num']= cq[28] if cq[28] else "--"     # 硬卧
+            cu['yz_num']= cq[29] if cq[29] else "--"     # 硬座
+            cu['ze_num']= cq[30] if cq[30] else "--"     # 二等座
+            cu['zy_num']= cq[31] if cq[31] else "--"     # 一等座
+            cu['swz_num'] = cq[32] if cq[32] else "--"   # 商务座
+            cu['srrb_num'] = cq[33] if cq[33]  else "--" # 动卧
             cu['yp_ex'] = cq[34]
             cu['seat_types'] = cq[35]
             cu['exchange_train_flag'] = cq[36]
@@ -438,8 +439,9 @@ class Tickets(object):
         # |预订|76000D22440C|D2244|ICW|FZS|ICW|ESN|06:43|11:42|04:59|Y|PwOTz2wRXiTk8%2FLC4h%2FyG6XOcFdKgwSNKhOk2OwqJKLHaRjYvypFVaelM60%3D
         # |20180208|3|W1|01|07|0|0|||||||有||||无|有|无||O090M0O0|O9MO|0",
         self.checkUser()
-        print u"%3s | %5s | %10s | %10s | %10s | %10s | %10s | %10s | %10s | %10s" % \
-              (u"序号", u"车次", u"出发 - 到达", u"发时 - 到时", u"历时", u"软卧", u"特等座", u"一等座", u"二等座", u"动卧")
+        # print u"%2s|%2s|%s|%s|%s| %10s | %10s | %10s | %10s | %10s | %15s | %15s | %15s" % \
+        #       (u"序号", u"车次", u"出发 - 到达", u"发时 - 到时", u"历时", u"二等座", u"一等座", u"动卧", u"硬卧", u"硬座", u"软座", u"软卧", u"无座")
+        tableHeaders = [u"序号", u"车次", u"出发 - 到达", u"发时 - 到时", u"历时", u"二等座", u"一等座", u"动卧", u"硬卧", u"硬座", u"软座", u"软卧", u"无座"]
         idx = 0
         ticketsParsed = self.b4(tickets, stationInfoMap)
         for ticket in ticketsParsed:
@@ -450,13 +452,19 @@ class Tickets(object):
             secretStr = urllib.unquote(ticket['secretStr'])
             ticketInfo = ticket['queryLeftNewDTO']
             idx = idx + 1
-            print u"%6s | %10s | %20s | %20s | %10s | %10s | %10s | %10s | %10s | %10s" % \
-                (idx, ticketInfo['station_train_code'],
-                 ticketInfo['from_station_name'] + ' - ' + ticketInfo['to_station_name'],
-                 ticketInfo['start_time'] + ' - ' + ticketInfo['arrive_time'],
-                 ticketInfo['lishi'],
-                 ticketInfo['rw_num'], ticketInfo['tz_num'], ticketInfo['zy_num'], ticketInfo['ze_num'], ticketInfo['srrb_num'])
+            # print u"%3s|%5s|%10s|%10s|%5s| %15s | %15s | %15s | %15s | %15s | %15s | %15s | %15s" % \
+            #     (idx, ticketInfo['station_train_code'],
+            #      ticketInfo['from_station_name'] + ' - ' + ticketInfo['to_station_name'],
+            #      ticketInfo['start_time'] + ' - ' + ticketInfo['arrive_time'],
+            #      ticketInfo['lishi'],
+            #      ticketInfo['ze_num'], ticketInfo['zy_num'], ticketInfo['srrb_num'], ticketInfo['yw_num'], ticketInfo['yz_num'], ticketInfo['rz_num'], ticketInfo['rw_num'], ticketInfo['wz_num'])
             #print(u"{0:{10}>3} | {1:{10}>5} | {2:{10}>10} | {3:{10}>10} | {4:{10}>10} | {5:{10}>10} | {6:{10}>10} | {7:{10}>10} | {8:{10}>10} | {9:{10}>10}".format(idx, ticketInfo['station_train_code'],ticketInfo['from_station_name'] + ' - ' + ticketInfo['to_station_name'],ticketInfo['start_time'] + ' - ' + ticketInfo['arrive_time'], ticketInfo['lishi'],ticketInfo['rw_num'], ticketInfo['tz_num'], ticketInfo['zy_num'], ticketInfo['ze_num'], ticketInfo['srrb_num'], u'\u3000'))
+            table = [[idx, ticketInfo['station_train_code'],
+                ticketInfo['from_station_name'] + ' - ' + ticketInfo['to_station_name'],
+                ticketInfo['start_time'] + ' - ' + ticketInfo['arrive_time'],
+                ticketInfo['lishi'],
+                ticketInfo['ze_num'], ticketInfo['zy_num'], ticketInfo['srrb_num'], ticketInfo['yw_num'], ticketInfo['yz_num'], ticketInfo['rz_num'], ticketInfo['rw_num'], ticketInfo['wz_num']]]
+            print tabulate(table, headers=tableHeaders, tablefmt="fancy_grid", numalign="right")
             print u"[*]创建订单请求..."
             self.submitOrder(secretStr, ticketInfo['from_station_name'], ticketInfo['to_station_name'])
             (repeatSubmitToken, keyCheckIsChange) = self.initDc()
