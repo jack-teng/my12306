@@ -5,6 +5,8 @@ import sys
 from multiprocessing import Process
 from fake_useragent import UserAgent
 import os
+from os import listdir
+from os.path import isfile, join
 #import psutil
 from datetime import datetime
 import time
@@ -299,6 +301,7 @@ class Tickets(object):
         content  = {}
         status   = False
         availableTrains = []
+        stationInfoMap = {}
         req = requests.Request('GET', leftTicketUrl, headers=headers)
         prepped = self.session.prepare_request(req)
 
@@ -316,10 +319,12 @@ class Tickets(object):
                           timeout=10
                           )
             #print "查询余票URL: %s" % response.request.url
-            print "查询余票URL: %s" % prepped.url
+            #print "查询余票URL: %s" % prepped.url
             content  = loads(response.content)
             status   = content['status']
-            candidateTrains = content['data']['result']
+            ticketsData = content['data']
+            stationInfoMap = ticketsData['map']
+            candidateTrains = ticketsData['result']
             if None != config['train_no'] and '' != config['train_no']:
                 availableTrains = filter(self.trainFilterByNo, candidateTrains)
             else:
@@ -345,17 +350,19 @@ class Tickets(object):
                                              )
                 content = loads(response.content)
                 status = content['status']
-                candidateTrains = content['data']['result']
+                ticketsData = content['data']
+                stationInfoMap = ticketsData['map']
+                candidateTrains = ticketsData['result']
                 if None != config['train_no'] and '' != config['train_no']:
                     availableTrains = filter(self.trainFilterByNo, candidateTrains)
                 else:
                     availableTrains = candidateTrains
             except KeyboardInterrupt, e:
                 print u"[*]查询余票中断（%s）" % status
-                return availableTrains
+                return (stationInfoMap, availableTrains)
             except BaseException, e:
                 pass
-        return availableTrains
+        return (stationInfoMap, availableTrains)
 
     def trainFilterByNo(self, train):
         global config
@@ -363,33 +370,95 @@ class Tickets(object):
         trainNo = fields[3]
         return trainNo == config['train_no']
 
-    def buyTickets(self, tickets):
+        # queryLeftTickets_end.js
+        # ct is result field of query left tickets response body;
+        # cv is map field of query left tickets response body
+    def b4(self, ct, cv):
+        cs = []
+        for ticket in ct:
+            cw = {}
+            cq = ticket.split("|")
+            cw['secretHBStr'] = cq[36]
+            cw['secretStr'] = cq[0]
+            cw['buttonTextInfo'] = cq[1]
+            cu = {}
+            cu['train_no'] = cq[2]
+            cu['station_train_code'] = cq[3]
+            cu['start_station_telecode'] = cq[4]
+            cu['end_station_telecode'] = cq[5]
+            cu['from_station_telecode'] = cq[6]
+            cu['to_station_telecode'] = cq[7]
+            cu['start_time'] = cq[8]
+            cu['arrive_time'] = cq[9]
+            cu['lishi'] = cq[10]
+            cu['canWebBuy'] = cq[11]
+            cu['yp_info'] = cq[12]
+            cu['start_train_date'] = cq[13]
+            cu['train_seat_feature'] = cq[14]
+            cu['location_code'] = cq[15]
+            cu['from_station_no'] = cq[16]
+            cu['to_station_no'] = cq[17]
+            cu['is_support_card'] = cq[18]
+            cu['controlled_train_flag'] = cq[19]
+            cu['gg_num'] = cq[20] if cq[20] else "--"
+            cu['gr_num'] = cq[21] if cq[21] else "--"
+            cu['qt_num'] = cq[22] if cq[22] else "--"
+            cu['rw_num']= cq[23] if cq[23] else "--"
+            cu['rz_num']= cq[24] if cq[24] else "--"
+            cu['tz_num']= cq[25] if cq[25] else "--"
+            cu['wz_num']= cq[26] if cq[26] else "--"
+            cu['yb_num']= cq[27] if cq[27] else "--"
+            cu['yw_num']= cq[28] if cq[28] else "--"
+            cu['yz_num']= cq[29] if cq[29] else "--"
+            cu['ze_num']= cq[30] if cq[30] else "--"
+            cu['zy_num']= cq[31] if cq[31] else "--"
+            cu['swz_num'] = cq[32] if cq[32] else "--"
+            cu['srrb_num'] = cq[33] if cq[33]  else "--"
+            cu['yp_ex'] = cq[34]
+            cu['seat_types'] = cq[35]
+            cu['exchange_train_flag'] = cq[36]
+            cu['from_station_name'] = cv[cq[6]]
+            cu['to_station_name'] = cv[cq[7]]
+            cw['queryLeftNewDTO'] = cu
+            cs.append(cw)
+        return cs
+
+    def buyTickets(self, tickets, stationInfoMap):
         # '''"cO1H6YX8YGo7g1x%2BwEh2svRjS4MPkj1D7zexIoQEpmpOBn2FhqiWNh9geqO9CqQlhjPUUCCsJRFW%0AtWfgD7tDyEOOK1ujyqffD9TmIqlmOjThaNQ%2BRqFWiUf8XXBR39y5RxueqBDazxq%2B4jTCpZ7jYuEN%0ARQ3iW4jskblQx%2B7EpNQVpzAaVa5Mc9NIB1zz6ka4mVor8uFqrkE72AUYykyKqLL5qbtIp5gQI3yi%0AkQBHFhcYD7F4iRx493WnrFxX2azZ
         #|预订|76000D22440C|
         #D2244|ICW   |FZS  |ICW   |ESN  |06:43 |11:42 |04:59 |Y     |OajMKAzDQz7wEFpkCGrY6GWmEeyx5zQsanidEVx0ZetfcelR
-        #3    4始发   5终点  6出发  7到达  8发时   9到时  10历时  11当日  12
+        #3    4始发  5终点 6出发  7到达 8发时  9到时  10历时 11当日 12
 
-        #|20180116 |3 |W1 |01 |07 |0 |0 |  |  |  |  |  |  |有 |   |  |    |无  |20  |   |    |O0M0O0 |OMO  |0",'''
-        #13        14 15  16  17  18 19 20 21 22 23 24 25 26  27  28 29   30   31  32   33   34      35
+        #|20180116 |3 |W1 |01 |07 |0 |0 |  |          |      |      |      |        |有    |   |      |      |无      |20      |        |      |O0M0O0 |OMO         |0",'''
+        #13        14 15  16  17  18 19 20 21高级软卧 22其他 23软卧 24软座 25特等座 26无座 27  28硬卧 29硬座 30二等座 31一等座 32商务座 33动卧 34yp_ex 35seat_types 36exchange_train_flag
 
         # "|23:00-06:00系统维护时间|76000D22440C|D2244|ICW|FZS|ICW|ESN..."
-        print u"%3s | %5s | %10s | %10s | %10s | %10s | %10s | %10s" % \
-              (u"序号", u"车次", u"出发 - 到达", u"发时 - 到时", u"历时", u"特等座", u"一等座", u"二等座")
-        idx = 0
+
+        # "pu4Z1kAf7kV%2BTea9lk7e%2BkVoDEgoqUG5zNseWWHkJGWTmSXXp8I4l8KE5vzL88t5GP0ifiNRItRF%0Ac2uCXvapSkZbuXF82eJTIynFbR0sE8asKvDTAWsR8DMRg7gB86Tpxqi%2Fyz3P%2BknsZvKXk%2FSRyONF%0AaPVFelGpadNkRUVdJzxgFviLiF8xSaDkHNCAisb4zKY%2BBMZIOEz0edCLn9kfC2hVrsDOUv%2FhkCZp%0AhRBKSwyYdcXhC0dEoBVnF68%2FH0QlJyiqTGFD5H0%3D
+        # |预订|76000D22440C|D2244|ICW|FZS|ICW|ESN|06:43|11:42|04:59|Y|PwOTz2wRXiTk8%2FLC4h%2FyG6XOcFdKgwSNKhOk2OwqJKLHaRjYvypFVaelM60%3D
+        # |20180208|3|W1|01|07|0|0|||||||有||||无|有|无||O090M0O0|O9MO|0",
         self.checkUser()
-        for ticket in tickets:
-            fields  = ticket.split('|')
-            seceret = urllib.unquote(fields[0])
-            trainNo = fields[2]
-            leftTicketStr = fields[12]
+        print u"%3s | %5s | %10s | %10s | %10s | %10s | %10s | %10s | %10s | %10s" % \
+              (u"序号", u"车次", u"出发 - 到达", u"发时 - 到时", u"历时", u"软卧", u"特等座", u"一等座", u"二等座", u"动卧")
+        idx = 0
+        ticketsParsed = self.b4(tickets, stationInfoMap)
+        for ticket in ticketsParsed:
+            #fields  = ticket.split('|')
+            #seceret = urllib.unquote(fields[0])
+            #trainNo = fields[2]
+            #leftTicketStr = fields[12]
+            secretStr = urllib.unquote(ticket['secretStr'])
+            ticketInfo = ticket['queryLeftNewDTO']
             idx = idx + 1
-            print u"%3s | %5s | %10s | %10s | %10s | %10s | %10s | %10s" % \
-                  (idx, fields[3], \
-                   STATIONS[fields[6]]['name'] + '-' + STATIONS[fields[7]]['name'], \
-                   fields[8] + ' - ' + fields[9], fields[10], \
-                   fields[31], fields[31], fields[30])
+            print u"%6s | %10s | %20s | %20s | %10s | %10s | %10s | %10s | %10s | %10s" % \
+                (idx, ticketInfo['station_train_code'],
+                 ticketInfo['from_station_name'] + ' - ' + ticketInfo['to_station_name'],
+                 ticketInfo['start_time'] + ' - ' + ticketInfo['arrive_time'],
+                 ticketInfo['lishi'],
+                 ticketInfo['rw_num'], ticketInfo['tz_num'], ticketInfo['zy_num'], ticketInfo['ze_num'], ticketInfo['srrb_num'])
+            #print(u"{0:{10}>3} | {1:{10}>5} | {2:{10}>10} | {3:{10}>10} | {4:{10}>10} | {5:{10}>10} | {6:{10}>10} | {7:{10}>10} | {8:{10}>10} | {9:{10}>10}".format(idx, ticketInfo['station_train_code'],ticketInfo['from_station_name'] + ' - ' + ticketInfo['to_station_name'],ticketInfo['start_time'] + ' - ' + ticketInfo['arrive_time'], ticketInfo['lishi'],ticketInfo['rw_num'], ticketInfo['tz_num'], ticketInfo['zy_num'], ticketInfo['ze_num'], ticketInfo['srrb_num'], u'\u3000'))
             print u"[*]创建订单请求..."
-            self.submitOrder(seceret, STATIONS[fields[6]]['name'], STATIONS[fields[7]]['name'])
+            self.submitOrder(secretStr, ticketInfo['from_station_name'], ticketInfo['to_station_name'])
             (repeatSubmitToken, keyCheckIsChange) = self.initDc()
             #self.getPassengers(repeatSubmitToken)
             print u"[*]检查订单信息..."
@@ -397,11 +466,11 @@ class Tickets(object):
                 continue
 
             print u"[*]查询余票详情..."
-            withSeatCount, noSeatCount = self.getQueueCount(trainNo, fields[3], fields[15], fromStationCode, toStationCode, \
-                                                            leftTicketStr, repeatSubmitToken)
+            withSeatCount, noSeatCount = self.getQueueCount(ticketInfo['train_no'], ticketInfo['station_train_code'], ticketInfo['location_code'], fromStationCode, toStationCode, \
+                                                            ticketInfo['yp_info'], repeatSubmitToken)
             print u"余票：　有座－%s张, 无座－%s张" % (withSeatCount, noSeatCount)
             print u"[*]提交订单..."
-            if self.confirmOrder(repeatSubmitToken, keyCheckIsChange, leftTicketStr):
+            if self.confirmOrder(repeatSubmitToken, keyCheckIsChange, ticketInfo['yp_info']):
                 print u"[*]查询订单号..."
                 if self.queryOrderState(repeatSubmitToken):
                     return True
@@ -442,7 +511,7 @@ class Tickets(object):
         headers["X-Requested-With"] = "XMLHttpRequest"
         headers['DNT'] = '1'
         headers["Connection"] = "keep-alive"
-        print u"submitOrder %s - %s" % (fromName, toName)
+        #print u"submitOrder %s - %s" % (fromName, toName)
         data = {
             'secretStr': secretStr,
             'train_date': config['depart_date'],
@@ -456,24 +525,27 @@ class Tickets(object):
         # resp ok: {"validateMessagesShowId":"_validatorMessage","status":true,"httpstatus":200,"data":"N",
         #   "messages":[],"validateMessages":{}}
         # resp nok: {"validateMessagesShowId":"_validatorMessage","status":false,"httpstatus":200,
-        #   "messages":["车票信息已过期，请重新查询最新车票信息"],"validateMessages":{}}
+        #            "messages":["车票信息已过期，请重新查询最新车票信息"],"validateMessages":{}}
+        #           {"validateMessagesShowId":"_validatorMessage","status":false,"httpstatus":200,
+        #            "messages":["提交失败，请重试..."],"validateMessages":{}}
+
         response = {}
         status = False
-        dict = {}
         try:
             response = self.session.post(url=submitOrderUrl, data=data, headers=headers, verify=False)
             status = loads(response.content)['status']
         except BaseException, e:
             pass
         while not status:
-            print u"[*]创建订单请求出错: %s, 2 秒后重试" % response.content
-            time.sleep(2)
+            print u"[*]创建订单请求响应: %s" % response.content
+            print u"[*]创建订单请求失败, 2 秒后重试"
             try:
+                time.sleep(2)
                 response = self.session.post(url=submitOrderUrl, data=data, headers=headers, verify=False)
                 status = loads(response.content)['status']
             except KeyboardInterrupt, e:
                 print u"[*]创建订单中断（%s）" % status
-                return dict['status']
+                return status
             except BaseException, e:
                 pass
         return status
@@ -535,6 +607,90 @@ class Tickets(object):
         #                       "postalcode":"","first_letter":"","recordCount":"13","total_times":"99","index_id":"0"},
         response = self.session.post(url=getPassengersUrl, data=data, headers=headers, verify=False)
 
+    # queryLeftTickets_end.js
+    # def seatNameToCode(self, cr) {
+    #     cq = "";
+    #     if (cr == "一等座") {
+    #         cq = "ZY"
+    #     }
+    #     if (cr == "二等座") {
+    #         cq = "ZE"
+    #     }
+    #     if (cr == "SWZ") {
+    #         cq = "商务座"
+    #     }
+    #     if (cr == "TZ") {
+    #         cq = "特等座"
+    #     }
+    #     if (cr == "YZ") {
+    #         cq = "硬座"
+    #     }
+    #     if (cr == "RZ") {
+    #         cq = "软座"
+    #     }
+    #     if (cr == "YW") {
+    #         cq = "硬卧"
+    #     }
+    #     if (cr == "RW") {
+    #         cq = "软卧"
+    #     }
+    #     if (cr == "GR") {
+    #         cq = "高级软卧"
+    #     }
+    #     if (cr == "SRRB") {
+    #         cq = "动卧"
+    #     }
+    #     if (cr == "YYRW") {
+    #         cq = "高级动卧"
+    #     }
+    #     if (cr == "WZ") {
+    #         cq = "无座"
+    #     }
+    #     return cq
+    # }
+
+    # seat_type: M : 一等座, O : 二等座, 9 : 商务座, P: 特等座, 1: 硬座, 2: 软座, 3: 硬卧, 4: 软卧,
+    #            6: 高级软卧, WZ: 无座, F: 动卧, A: 高级动卧
+    def seatNameToCode(self, cr):
+        cq = "";
+        if cr == "一等座":
+            cq = "M"
+        elif cr == "二等座":
+            cq = "O"
+        elif cr == "商务座":
+            cq = "9"
+        elif cr == "特等座":
+            cq = "P"
+        elif cr == "硬座":
+            cq = "1"
+        elif cr == "软座":
+            cq = "2"
+        elif cr == "硬卧":
+            cq = "3"
+        # 无中铺
+        elif cr == "软卧":
+            cq = "4"
+        elif cr == "高级软卧":
+            cq = "6"
+        elif cr == "无座":
+            cq = "WZ"
+        elif cr == "动卧":
+            cq = "F"
+        elif cr == "高级动卧":
+            cq = "A"
+        return cq
+    def ticketTypeToCode(self, ticketType):
+        ret = ""
+        if "成人" == ticketType:
+            ret = "1"
+        elif "儿童" == ticketType:
+            ret = "2"
+        elif "学生" == ticketType:
+            ret = "3"
+        elif "残军" == ticketType:
+            ret = "4"
+        return ret
+
     def getPassengerTicketStr(self):
         global config
         #   {"name":"name", "gender":"female", "id":"id_num", "phone_num":"phone_num", "seat_type":"一等座"}
@@ -542,25 +698,35 @@ class Tickets(object):
         oldPassengerTicketList = []
         childrenTicketsCount = 0
         for passenger in config["passengers"]:
-            seatType = ""
-            if u"成人" == passenger['ticket_type']:
-                if u"一等座" == passenger['seat_type']:
-                    seatType = "M,0,1"
-                elif u"二等座" == passenger['seat_type']:
-                    seatType = "O,0,1"
-            elif u"儿童" == passenger['ticket_type']:
-                childrenTicketsCount += 1
-                if u"一等座" == passenger['seat_type']:
-                    seatType = "M,0,2"
-                elif u"二等座" == passenger['seat_type']:
-                    seatType = "O,0,2"
-            else:
-                seatType = "O,0,1"
-            passengerTicketList.append(",".join([seatType, passenger['name'], "1", \
+            seatType = self.seatNameToCode(passenger['seat_type'])
+            # 卧铺床位: 0: 不限, 1: 下铺, 2: 中铺(仅限硬卧), 3: 上铺
+            # bedType = sefl.bedTypeToCode()
+            bedType = "0"
+            ticketType = self.ticketTypeToCode(passenger['ticket_type'])
+            # 证件类型:
+            # "1" - 二代身份证
+            # "C" - 港澳通行证
+            # "G" - 台湾通行证
+            # "B" - 护照
+            idType = "1"
+            passengerTicketList.append(",".join([seatType, bedType, ticketType, passenger['name'], idType, \
                                                 passenger['id'], passenger['phone_num'], "N"]))
             if u"成人" == passenger['ticket_type']:
                 oldPassengerTicketList.append(",".join([passenger['name'], "1", passenger["id"], "1_"]))
+        # getpassengerTicketsForAutoSubmit
+        # seat_type, 卧铺床位, ticket_type
+        # var cA = cx + "," + cy + "," + tickets_info[cw].ticket_type + "," + tickets_info[cw].name + "," +
+        # tickets_info[cw].id_type + "," + tickets_info[cw].id_no + "," + (tickets_info[cw].phone_no == null ? "" : tickets_info[cw].phone_no) + ",N";
         self.passengerTicketStr = "_".join(passengerTicketList)
+
+        #  getOldPassengersForAutoSubmit = function () {
+        # var cs = "";
+        # for (var cr = 0; cr < passengerChecked.length; cr++) {
+        #     var cq = passengerChecked[cr].passenger_name + "," + passengerChecked[cr].passenger_id_type_code + "," + passengerChecked[cr].passenger_id_no + "," + passengerChecked[cr].passenger_type;
+        #     cs += cq + "_"
+        # }
+        # return cs
+        #};
         self.oldPassengerTicketStr = "".join(oldPassengerTicketList) + "_+" * childrenTicketsCount
         #print "ticket str: %s" % self.passengerTicketStr
         #print "old ticker str: %s" % self.oldPassengerTicketStr
@@ -621,8 +787,9 @@ class Tickets(object):
                 if re.match(r"0张", response.content):
                     print u"\n[*]余票不足: %s, 2秒后重试" % response.content
                 else:
-                    print u"[*]检查订单信息失败: %s, 2秒后重试" % response.content
-                print u"\n[*]Press Ctrl + C to stop\n"
+                    print u"[*]检查订单信息响应: %s" % response.content
+                    print u"[*]检查订单信息失败, 2秒后重试"
+                print u"[*]Press Ctrl + C to stop\n"
                 time.sleep(2)
                 response = self.session.post(url=checkOrderInfoUrl, data=data, headers=headers, verify=False)
                 submitStatus = loads(response.content)['data']['submitStatus']
@@ -692,7 +859,8 @@ class Tickets(object):
             print u"[*]查询余票详情失败: %s" % response
         while not status:
             try:
-                print u"[*]查询余票详情失败: %s, 2秒后重试" % response.content
+                print u"[*]查询余票详情响应: %s" % response.content
+                print u"[*]查询余票详情失败, 2秒后重试"
                 time.sleep(2)
                 response = self.session.post(url=getQueueCountUrl, data=body, headers=headers, verify=False)
                 #response = self.session.send(prepped,
@@ -820,35 +988,6 @@ class Tickets(object):
         response = self.session.get(url=logoutUrl, headers=headers)
 
 
-def parseConfigs(args):
-    global configs
-    global username
-    global password
-    global fromStationCode
-    global toStationCode
-    global fromStationName
-    global toStationName
-    configFile = None
-    if len(args) > 1:
-        configFile = args[1]
-    else:
-        configFile = './tickets.config'
-    with open(configFile, 'r') as f:
-        configs = load(f)
-        #print u"configs: %s" % configs
-    try:
-        if len(configs) < 1:
-            print u"[*]请配置购票信息."
-            sys.exit(-1)
-    except BaseException, e:
-        print u"配置文件错误: %s" % e
-        sys.exit(-1)
-    credFile = './credential.config'
-    with open(credFile, 'r') as f:
-        creds = load(f)
-        username = creds['user_name']
-        password = creds['password']
-
 def loopCheckCaptcha(tickets):
     chek = False
     #只有验证成功后才能执行登录操作
@@ -882,8 +1021,85 @@ def loopLogin(tickets):
         except:
             pass
 
+def processTicketsConfig(tickets):
+    global config
+    global fromStationCode
+    global fromStationName
+    global toStationCode
+    global toStationName
+    for (idx, config) in enumerate(configs):
+        fromStationCode = STATIONS[config['from_station']]['code']
+        toStationCode   = STATIONS[config['to_station']]['code']
+        fromStationName = STATIONS[config['from_station']]['name']
+        toStationName   = STATIONS[config['to_station']]['name']
+        print u"[*] %s: 尝试购买 [%s] 日从 [%s] 到 [%s] 的车票..." % (idx, config['depart_date'], fromStationName, toStationName)
+        if len(config['passengers']) < 1:
+            continue
+        tickets.getPassengerTicketStr()
+        stationInfoMap, leftTickets = tickets.queryLeftTickets()
+        if len(leftTickets) < 1:
+            print u"[*]购买 [%s] 日从 [%s] 到 [%s] 的车票失败，尝试下一趟列车..." % (config['depart_date'], fromStationName, toStationName)
+            continue
+        result = False
+        try:
+            result = tickets.buyTickets(leftTickets, stationInfoMap)
+        except BaseException, e:
+            print u"[*] %s 购票失败: %s, 尝试下一车次\n" % (idx, e)
+        if result:
+            print u"[*]购票成功，请登录12306网站付款。"
+            break
+    pass
+
+def parseTicketsConfig(configFile):
+    global configs
+    try:
+        with open(configFile, 'r') as f:
+            configs = load(f)
+            #print u"configs: %s" % configs
+        if len(configs) < 1:
+            print u"[*]无购票信息: %s" % configFile
+            return False
+        else:
+            return True
+    except BaseException, e:
+        print u"[*]配置文件错误: %s" % e
+        return False
+
+def chooseTicketConfigFile():
+    files = [f for f in listdir('./tickets') if isfile(join('./tickets', f))]
+    print "#==========================="
+    for (idx, f) in enumerate(files):
+        print " [%d]: %s" % (idx, f)
+    print "#==========================="
+    while True:
+        try:
+            choice = raw_input("[选择配置文件序号，或者按Ctrl + C、exit退出]: ")
+            if 'exit' == choice:
+                return None
+            else:
+                return files[int(choice)]
+        except ValueError, e:
+            print "输入有误，请重新输入"
+        except IndexError, e:
+            print "输入有误，请重新输入"
+        except BaseException, e:
+            return None
+
 if __name__ == '__main__':
-    parseConfigs(sys.argv)
+    ticketsConfig = None
+    if len(sys.argv) > 1:
+        ticketsConfig = sys.argv[1]
+    else:
+        ticketsConfig = './tickets/tickets.config'
+    if not parseTicketsConfig(ticketsConfig):
+        sys.exit(0)
+
+    credFile = './credential.config'
+    with open(credFile, 'r') as f:
+        creds = load(f)
+        username = creds['user_name']
+        password = creds['password']
+
     tickets = Tickets()
     tickets.initLogin()
 
@@ -902,26 +1118,14 @@ if __name__ == '__main__':
         time.sleep(2)
 
     print u'\n[*]开始购票...\n'
-    for (idx, config) in enumerate(configs):
-        fromStationCode = STATIONS[config['from_station']]['code']
-        toStationCode   = STATIONS[config['to_station']]['code']
-        fromStationName = STATIONS[config['from_station']]['name']
-        toStationName   = STATIONS[config['to_station']]['name']
-        print u"[*] %s: 尝试购买 [%s] 日从 [%s] 到 [%s] 的车票..." % (idx, config['depart_date'], fromStationName, toStationName)
-        if len(config['passengers']) < 1:
-            continue
-        tickets.getPassengerTicketStr()
-        leftTickets = tickets.queryLeftTickets()
-        if len(leftTickets) < 1:
-            print u"[*]购买 [%s] 日从 [%s] 到 [%s] 的车票失败，尝试下一趟列车..." % (config['depart_date'], fromStationName, toStationName)
-            continue
-        result = False
-        try:
-            result = tickets.buyTickets(leftTickets)
-        except BaseException, e:
-            print u"[*] %s 购票失败: %s, 尝试下一车次\n" % (idx, e)
-        if result:
-            print u"[*]购票成功，请登录12306网站付款。"
-            break
+    processTicketsConfig(tickets)
+    try:
+        text = chooseTicketConfigFile()
+        while text:
+            if parseTicketsConfig(join('./tickets', text)):
+                processTicketsConfig(tickets)
+            text = chooseTicketConfigFile()
+    except BaseException, e:
+        pass
 
     tickets.logout()
