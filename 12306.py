@@ -208,7 +208,7 @@ class Tickets(object):
             headers['Upgrade-Insecure-Requests'] = "1"
             #result = self.session.post(url=loginUrl2,data={"_json_att":""},headers=headers,verify=False)
             #print "POST userLogin result: %s" % result2.content
-            print "POST userLogin end"
+            #print "POST userLogin end"
 
             headers = self.headers
             headers['Host'] = 'kyfw.12306.cn'
@@ -231,7 +231,7 @@ class Tickets(object):
                 result = self.session.post(url=uamtkUrl,data={"appid":"otn"},headers=headers,verify=False)
                 result_code = loads(result.content)['result_code']
             newapptk = loads(result.content)['newapptk']
-            print u"POST uamtk end: %s" % newapptk
+            #print u"POST uamtk end: %s" % newapptk
 
             headers = self.headers
             headers['Host'] = 'kyfw.12306.cn'
@@ -252,7 +252,7 @@ class Tickets(object):
                 print u"post uamauthiclient response: %s" % response.content
                 print u"Failed to get result code: %s" % e
             print u"POST uamauthclien end, result code: %s" % result_code
-            print u"Cookies after POST uamauthclient: %s" % response.cookies
+            # print u"Cookies after POST uamauthclient: %s" % response.cookies
 
             #getUserLoginUrl
             headers = self.headers
@@ -265,7 +265,7 @@ class Tickets(object):
             headers["Connection"] = "keep-alive"
             headers['Upgrade-Insecure-Requests'] = "1"
             result = self.session.post(url=getUserLoginUrl, data={"tk":newapptk},headers=headers,verify=False)
-            print u"GET userlogin end"
+            #print u"GET userlogin end"
             return True
         except BaseException, e:
             print u"Auth login failed: %s" % e
@@ -439,26 +439,13 @@ class Tickets(object):
         # |预订|76000D22440C|D2244|ICW|FZS|ICW|ESN|06:43|11:42|04:59|Y|PwOTz2wRXiTk8%2FLC4h%2FyG6XOcFdKgwSNKhOk2OwqJKLHaRjYvypFVaelM60%3D
         # |20180208|3|W1|01|07|0|0|||||||有||||无|有|无||O090M0O0|O9MO|0",
         self.checkUser()
-        # print u"%2s|%2s|%s|%s|%s| %10s | %10s | %10s | %10s | %10s | %15s | %15s | %15s" % \
-        #       (u"序号", u"车次", u"出发 - 到达", u"发时 - 到时", u"历时", u"二等座", u"一等座", u"动卧", u"硬卧", u"硬座", u"软座", u"软卧", u"无座")
         tableHeaders = [u"序号", u"车次", u"出发 - 到达", u"发时 - 到时", u"历时", u"二等座", u"一等座", u"动卧", u"硬卧", u"硬座", u"软座", u"软卧", u"无座"]
         idx = 0
         ticketsParsed = self.b4(tickets, stationInfoMap)
         for ticket in ticketsParsed:
-            #fields  = ticket.split('|')
-            #seceret = urllib.unquote(fields[0])
-            #trainNo = fields[2]
-            #leftTicketStr = fields[12]
             secretStr = urllib.unquote(ticket['secretStr'])
             ticketInfo = ticket['queryLeftNewDTO']
             idx = idx + 1
-            # print u"%3s|%5s|%10s|%10s|%5s| %15s | %15s | %15s | %15s | %15s | %15s | %15s | %15s" % \
-            #     (idx, ticketInfo['station_train_code'],
-            #      ticketInfo['from_station_name'] + ' - ' + ticketInfo['to_station_name'],
-            #      ticketInfo['start_time'] + ' - ' + ticketInfo['arrive_time'],
-            #      ticketInfo['lishi'],
-            #      ticketInfo['ze_num'], ticketInfo['zy_num'], ticketInfo['srrb_num'], ticketInfo['yw_num'], ticketInfo['yz_num'], ticketInfo['rz_num'], ticketInfo['rw_num'], ticketInfo['wz_num'])
-            #print(u"{0:{10}>3} | {1:{10}>5} | {2:{10}>10} | {3:{10}>10} | {4:{10}>10} | {5:{10}>10} | {6:{10}>10} | {7:{10}>10} | {8:{10}>10} | {9:{10}>10}".format(idx, ticketInfo['station_train_code'],ticketInfo['from_station_name'] + ' - ' + ticketInfo['to_station_name'],ticketInfo['start_time'] + ' - ' + ticketInfo['arrive_time'], ticketInfo['lishi'],ticketInfo['rw_num'], ticketInfo['tz_num'], ticketInfo['zy_num'], ticketInfo['ze_num'], ticketInfo['srrb_num'], u'\u3000'))
             table = [[idx, ticketInfo['station_train_code'],
                 ticketInfo['from_station_name'] + ' - ' + ticketInfo['to_station_name'],
                 ticketInfo['start_time'] + ' - ' + ticketInfo['arrive_time'],
@@ -466,21 +453,56 @@ class Tickets(object):
                 ticketInfo['ze_num'], ticketInfo['zy_num'], ticketInfo['srrb_num'], ticketInfo['yw_num'], ticketInfo['yz_num'], ticketInfo['rz_num'], ticketInfo['rw_num'], ticketInfo['wz_num']]]
             print tabulate(table, headers=tableHeaders, tablefmt="fancy_grid", numalign="right")
             print u"[*]创建订单请求..."
+            # queryLeftTickets_end.js
+            # onclick="checkG1234(secretStr, start_time, train_no, from_station_telecode, to_station_telecode)
+            #   -> submitOrderRequest(secretStr, start_time)
+            #       -> login/checkUser
+            #           -> S(secretStr, start_time) 
+            #               -> aW('dc', train_tour_flag)
+            # function aW(cr, cq) {
+            #         if (cq != null) {
+            #             if (cq == "fc") {
+            #                 otsRedirect("post", ctx + "confirmPassenger/initFc", {});
+            #                 return
+            #                 }
+            #             if (cq == "gc") {
+            #                 otsRedirect("post", ctx + "confirmPassenger/initGc", {});
+            #                 return
+            #                 }
+            #             }
+            #         if (cr == "dc") {
+            #             otsRedirect("post", ctx + "confirmPassenger/initDc", {});
+            #             return
+            #             } else {
+            #                 otsRedirect("post", ctx + "confirmPassenger/initWc", {})
+            #                 }
+            #             }
             self.submitOrder(secretStr, ticketInfo['from_station_name'], ticketInfo['to_station_name'])
-            (repeatSubmitToken, keyCheckIsChange) = self.initDc()
+            self.initDc()
             #self.getPassengers(repeatSubmitToken)
             print u"[*]检查订单信息..."
-            if not self.checkOrderInfo(repeatSubmitToken):
-                continue
+            if not self.checkOrderInfo():
+                pass
+                #continue
 
             print u"[*]查询余票详情..."
-            withSeatCount, noSeatCount = self.getQueueCount(ticketInfo['train_no'], ticketInfo['station_train_code'], ticketInfo['location_code'], fromStationCode, toStationCode, \
-                                                            ticketInfo['yp_info'], repeatSubmitToken)
+            withSeatCount, noSeatCount = self.getQueueCount(ticketInfo['train_no'],
+                                                            ticketInfo['station_train_code'],
+                                                            ticketInfo['location_code'],
+                                                            fromStationCode,
+                                                            toStationCode,
+                                                            ticketInfo['yp_info'])
             print u"余票：　有座－%s张, 无座－%s张" % (withSeatCount, noSeatCount)
             print u"[*]提交订单..."
-            if self.confirmOrder(repeatSubmitToken, keyCheckIsChange, ticketInfo['yp_info']):
+            # passengerInfo_js.js:
+            # qr_submitClickEvent -> I()
+            #   -> A(ticketInfoForPassengerForm.tour_flag)
+            #       var aa = new OrderQueueWaitTime(tour_flag, v, Q);
+            #        aa.start()
+            if self.confirmOrder(ticketInfo['yp_info'], ticketInfo['location_code']):
                 print u"[*]查询订单号..."
-                if self.queryOrderState(repeatSubmitToken):
+                orderId = self.queryOrderStateWaitTime()
+                if orderId and resultOrderForDcQueue(orderId):
                     return True
                 else:
                     print u"[*]查询订单号失败，尝试购买下一趟列车..."
@@ -524,7 +546,7 @@ class Tickets(object):
             'secretStr': secretStr,
             'train_date': config['depart_date'],
             #'back_train_date': '2018-01-10',
-            'tour_flag': 'dc',
+            'tour_flag': 'dc', # dc: 单程, fc: 返程, wf: 往返?
             'purpose_codes': 'ADULT',
             'query_from_station_name': fromName,
             'query_to_station_name': toName,
@@ -532,6 +554,7 @@ class Tickets(object):
         }
         # resp ok: {"validateMessagesShowId":"_validatorMessage","status":true,"httpstatus":200,"data":"N",
         #   "messages":[],"validateMessages":{}}
+        # comment: data: 距列车开车时间很近了
         # resp nok: {"validateMessagesShowId":"_validatorMessage","status":false,"httpstatus":200,
         #            "messages":["车票信息已过期，请重新查询最新车票信息"],"validateMessages":{}}
         #           {"validateMessagesShowId":"_validatorMessage","status":false,"httpstatus":200,
@@ -574,22 +597,31 @@ class Tickets(object):
         result = self.session.post(url=initDcUrl, data={'_json_att':''}, headers=headers, verify=False)
         #print "initdc result: %s" % result.content
         # var globalRepeatSubmitToken = '7100381b00696bc94607092cbeb28167';
-        repeatSubmitToken = ""
+        self.repeatSubmitToken = None
         m = re.search("var globalRepeatSubmitToken = '(.*?)';", result.content)
         if m:
-            repeatSubmitToken = m.group(1)
-        print u"repeat submit token: %s" % repeatSubmitToken
-        keyCheckIsChange = ""
+            self.repeatSubmitToken = m.group(1)
+        print u"repeat submit token: %s" % self.repeatSubmitToken
+        self.keyCheckIsChange = ""
         # 'key_check_isChange':'A0B67C6693D70DCE0533B140D45E53299C95C802D05CEAE752CE896B',
         m = re.search("'key_check_isChange'\s*:\s*'(.*?)'.*?,", result.content)
         if m:
-            keyCheckIsChange = m.group(1)
-        print u"key_check_isChange: %s" % keyCheckIsChange
-        #              'leftTicketStr':'ByyR5GeiUJIZgGro5zy%2BL2ayYMYQiHVq7Nnep10Qkz5wTxuUjhAoprybxjo%3D',
-        leftTicketStr = ""
-        return (repeatSubmitToken, keyCheckIsChange)
+            self.keyCheckIsChange = m.group(1)
+        print u"key_check_isChange: %s" % self.keyCheckIsChange
+        # initDc_resp.html
+        # queryLeftTicketRequestDTO.ypInfoDetail
+        # m = re.search("'ypInfoDetail'\s*:\s*'(.*?)'.*?,", result.content)
+        # if m:
+        #     ypInfoDetail = m.group(1)
+        # print u"ypInfoDetail: %s" % ypInfoDetail
+        self.ticketInfoForPassengerForm = None
+        m = re.search("var ticketInfoForPassengerForm\s*=\s*(\{.*?\});", result.content)
+        if m:
+            self.ticketInfoForPassengerForm = loads(m.group(1).replace("'", '"'))
+        # 'leftTicketStr':'ByyR5GeiUJIZgGro5zy%2BL2ayYMYQiHVq7Nnep10Qkz5wTxuUjhAoprybxjo%3D',
+        return (self.repeatSubmitToken, self.keyCheckIsChange)
 
-    def getPassengers(self, repeatSubmitToken):
+    def getPassengers(self):
         headers = self.headers
         headers['Host'] = 'kyfw.12306.cn'
         headers['Accept'] = "*/*"
@@ -602,7 +634,7 @@ class Tickets(object):
         headers["Connection"] = "keep-alive"
         data = {
             '_json_att': '',
-            'REPEAT_SUBMIT_TOKEN': repeatSubmitToken
+            'REPEAT_SUBMIT_TOKEN': self.repeatSubmitToken
         }
         #  89 #{"validateMessagesShowId":"_validatorMessage","status":true,"httpstatus":200,
         # "data":{"isExist":true,"exMsg":"","two_isOpenClick":["93","95","97","99"],
@@ -705,8 +737,11 @@ class Tickets(object):
         passengerTicketList = []
         oldPassengerTicketList = []
         childrenTicketsCount = 0
+        self.seatType = None
         for passenger in config["passengers"]:
             seatType = self.seatNameToCode(passenger['seat_type'])
+            if not self.seatType:
+                self.seatType = seatType
             # 卧铺床位: 0: 不限, 1: 下铺, 2: 中铺(仅限硬卧), 3: 上铺
             # bedType = sefl.bedTypeToCode()
             bedType = "0"
@@ -721,6 +756,8 @@ class Tickets(object):
                                                 passenger['id'], passenger['phone_num'], "N"]))
             if u"成人" == passenger['ticket_type']:
                 oldPassengerTicketList.append(",".join([passenger['name'], "1", passenger["id"], "1_"]))
+            elif u"儿童" == passenger['ticket_type']:
+                childrenTicketsCount += 1
         # getpassengerTicketsForAutoSubmit
         # seat_type, 卧铺床位, ticket_type
         # var cA = cx + "," + cy + "," + tickets_info[cw].ticket_type + "," + tickets_info[cw].name + "," +
@@ -739,7 +776,20 @@ class Tickets(object):
         #print "ticket str: %s" % self.passengerTicketStr
         #print "old ticker str: %s" % self.oldPassengerTicketStr
 
-    def checkOrderInfo(self, repeatSubmitToken):
+    # passengerInfo_js.js
+    # submitOrderClickEvent -> submitOrderClickEvent_common -> D() -> y() -> J()
+    #   y() -> t() && p()
+    # J()
+    #   -> T()
+    #   -> ajax.post.confirmPassenger/checkOrderInfo
+    #       success: P(response)
+    #           -> renderTicketInfo(selectedTickets)
+    #               -> h() -> ac() 
+    #               -> updateAllCheckBox()
+    #           -> F(ticketInfoForPassengerForm.purpose_codes, V.data.isCheckOrderInfo, V.data.doneHMD)
+    #               -> E(purposes_code, isCheckOrderInfo)
+    #                   -> post confirmPassenger/getQueueCount
+    def checkOrderInfo(self):
         headers = self.headers
         headers['Host'] = 'kyfw.12306.cn'
         headers['Accept'] = "application/json, text/javascript, */*; q=0.01"
@@ -762,15 +812,15 @@ class Tickets(object):
         # _json_att
         # REPEAT_SUBMIT_TOKEN	ec44e1cf799034bca551530b2f131728
         data = {
-            'cancel_flag': 2,
-            'bed_level_order_num': '000000000000000000000000000000',
+            'cancel_flag': 2, # fixed value
+            'bed_level_order_num': '000000000000000000000000000000', # fixed value
             'passengerTicketStr': self.passengerTicketStr,
             'oldPassengerStr': self.oldPassengerTicketStr,
             'tour_flag': 'dc',
             'randCode': '',
             'whatsSelect': 1,
             '_json_att': '',
-            'REPEAT_SUBMIT_TOKEN': repeatSubmitToken
+            'REPEAT_SUBMIT_TOKEN': self.repeatSubmitToken
         }
         # resp:
         # {"validateMessagesShowId":"_validatorMessage","status":true,"httpstatus":200,
@@ -787,7 +837,7 @@ class Tickets(object):
         try:
             response = self.session.post(url=checkOrderInfoUrl, data=data, headers=headers, verify=False)
             submitStatus = loads(response.content)['data']['submitStatus']
-        except Excepation, e:
+        except BaseException, e:
             pass
             #print "[*]检查订单信息异常: %s" % e
         while not submitStatus:
@@ -804,11 +854,26 @@ class Tickets(object):
             except KeyboardInterrupt, e:
                 print u"[*]中断检查（%s）" % submitStatus
                 return submitStatus
-            except Excepation, e:
+            except BaseException, e:
                 pass
         return submitStatus
 
-    def getQueueCount(self, trainNo, trainCode, trainLocation, fromStationCode, toStationCode, leftTicketStr, repeatSubmitToken):
+    # passengerInfo_js
+    # E()
+    # data: {
+    #     train_date: new Date(orderRequestDTO.train_date.time).toString(),
+    #     train_no: orderRequestDTO.train_no,
+    #     stationTrainCode: orderRequestDTO.station_train_code,
+    #     seatType: limit_tickets[0].seat_type,
+    #     fromStationTelecode: orderRequestDTO.from_station_telecode,
+    #     toStationTelecode: orderRequestDTO.to_station_telecode,
+    #     leftTicket: ticketInfoForPassengerForm.queryLeftTicketRequestDTO.ypInfoDetail,
+    #     purpose_codes: V,
+    #     train_location: ticketInfoForPassengerForm.train_location,
+    #     isCheckOrderInfo: W
+    # },
+    # post success:
+    def getQueueCount(self, trainNo, trainCode, trainLocation, fromStationCode, toStationCode, leftTicketStr):
         headers = self.headers
         headers['Host'] = 'kyfw.12306.cn'
         headers['Accept'] = "application/json, text/javascript, */*; q=0.01"
@@ -820,37 +885,46 @@ class Tickets(object):
         headers['DNT'] = '1'
         headers["Connection"] = "keep-alive"
         dt = datetime.strptime(config['depart_date'], "%Y-%m-%d")
-        format = "%a+%b+%d+%Y+%H:%M:%S+GMT+0800+(CST)"
-        data = {
-            'train_date': dt.strftime(format),
-            #'train_date': 'Thu+Feb+08+2018+00:00:00+GMT+0800+(CST)',
-            'train_no': trainNo,
-            'stationTrainCode': trainCode,
-            'seatType': 'O',
-            'fromStationCodeTelecode': fromStationCode,
-            'toStationCodeTelecode': toStationCode,
-            'leftTicket': leftTicketStr,
-            'purpose_codes': '00',
-            'train_location': trainLocation,
-            '_json_att': '',
-            'REPEAT_SUBMIT_TOKEN': repeatSubmitToken
-        }
+        dateformat = "%a+%b+%d+%Y+%H:%M:%S+GMT+0800+(CST)"
+        #data = {
+        #    '_json_att': '',
+        #    'fromStationCodeTelecode': fromStationCode,
+        #    'leftTicket': leftTicketStr,
+        #    'purpose_codes': self.ticketInfoForPassengerForm['purpose_codes'],
+        #    'REPEAT_SUBMIT_TOKEN': self.repeatSubmitToken,
+        #    #seatType: limit_tickets[0].seat_type,
+        #    'seatType': 'O',
+        #    'stationTrainCode': trainCode,
+        #    'toStationCodeTelecode': toStationCode,
+        #    #'train_date': 'Thu+Feb+08+2018+00:00:00+GMT+0800+(CST)',
+        #    'train_date': dt.strftime(dateformat),
+        #    'train_location': trainLocation,
+        #    'train_no': trainNo
+        #}
         req = requests.Request('POST', getQueueCountUrl, headers=headers)
         #req = requests.Request('POST', getQueueCountUrl, data=data, headers=headers)
         prepped = self.session.prepare_request(req)
         #prepped.body = json.dumps(data)
         body = "_json_att=&stationTrainCode=" + trainCode + "&train_no=" + trainNo + "&leftTicket=" + leftTicketStr + \
-                "&train_location=W1&fromStationCodeTelecode=" + fromStationCode + "&seatType=O&toStationCodeTelecode=" + toStationCode + \
-                "&REPEAT_SUBMIT_TOKEN=" + repeatSubmitToken + \
-                "&train_date=" + dt.strftime("%a+%b+%d+%Y") + "+00%3A00%3A00+GMT%2B0800+(CST)&purpose_codes=00"""
+                "&train_location=W1&fromStationCodeTelecode=" + fromStationCode + "&seatType=" + self.seatType + "&toStationCodeTelecode=" + toStationCode + \
+                "&REPEAT_SUBMIT_TOKEN=" + self.repeatSubmitToken + \
+                "&train_date=" + dt.strftime("%a+%b+%d+%Y") + "+00%3A00%3A00+GMT%2B0800+(CST)" + \
+                "&purpose_codes=" + self.ticketInfoForPassengerForm['purpose_codes']
         prepped.body = body
         print u"查询余票详情请求数据: %s" % prepped.body
 
+        # 响应格式由seatTye决定
+        # 二等座响应：
         # resp: {"validateMessagesShowId":"_validatorMessage","status":true,"httpstatus":200,
         # "data":{"count":"0","ticket":"27,144","op_2":"false","countT":"0","op_1":"false"},"messages":[],"validateMessages":{}}
+        # var Z = Y.data.ticket.split(",");
+        # X = "本次列车，" + (limit_tickets[0].seat_type_name).split("（")[0] + "余票";
+
+        # 一等座响应:
+        # {"validateMessagesShowId":"_validatorMessage","status":true,"httpstatus":200,"data":{"count":"0","ticket":"46","op_2":"false","countT":"0","op_1":"false"},"messages":[],"validateMessages":{}}
         ticketsCount = (0,0)
         response = None
-        dict = {}
+        content = {}
         status = False
         try:
             #response = self.session.send(prepped,
@@ -861,8 +935,8 @@ class Tickets(object):
             #                            timeout=10
             #                            )
             response = self.session.post(url=getQueueCountUrl, data=body, headers=headers, verify=False)
-            dict = loads(response.content)
-            status = dict['status']
+            content = loads(response.content)
+            status = content['status']
         except BaseException, e:
             print u"[*]查询余票详情失败: %s" % response
         while not status:
@@ -878,22 +952,23 @@ class Tickets(object):
                 #                             #cert=cert,
                 #                             timeout=10
                 #                             )
-                dict = loads(response.content)
-                status = dict['status']
+                content = loads(response.content)
+                status = content['status']
             except KeyboardInterrupt, e:
                 print u"[*]查询余票详情中断（%s" % ticketsCount
                 break
             except BaseException, e:
                 pass
         try:
-            data = dict['data']
-            tickets = data['ticket'].split(',')
-            ticketsCount = (tickets[0], tickets[1])
+            print u"[*]余票详情: %s" % response.content
+            data = content['data']
+            ticket = data['ticket'].split(',')
+            ticketsCount = (ticket[0], ticket[1] if len(ticket) > 1 else 0)
         except BaseException, e:
             print u"get queue count failed, error: %s" % e
         return ticketsCount
 
-    def confirmOrder(self, repeatSubmitToken, keyCheckIsChange, leftTicketStr):
+    def confirmOrder(self, leftTicketStr, trainLocation):
         headers = self.headers
         headers['Host'] = 'kyfw.12306.cn'
         headers['Accept'] = "application/json, text/javascript, */*; q=0.01"
@@ -908,10 +983,10 @@ class Tickets(object):
             'passengerTicketStr':self.passengerTicketStr,
             'oldPassengerStr':self.oldPassengerTicketStr,
             'randCode':"",
-            'purpose_codes': '00',
-            'key_check_isChange': keyCheckIsChange,
+            'purpose_codes': self.ticketInfoForPassengerForm['purpose_codes'],
+            'key_check_isChange': self.keyCheckIsChange,
             'leftTicketStr': leftTicketStr,
-            'train_location': "W1",
+            'train_location': trainLocation,
             'choose_seats': "",
             #'choose_seats': "1F", ###
             'seatDetailType': '000',
@@ -919,7 +994,7 @@ class Tickets(object):
             'roomType': '00',
             'dwAll': 'N',
             '_json_att': '',
-            'REPEAT_SUBMIT_TOKEN': repeatSubmitToken
+            'REPEAT_SUBMIT_TOKEN': self.repeatSubmitToken
         }
         # resp: {"validateMessagesShowId":"_validatorMessage","status":true,"httpstatus":200,
         #        "data":{"submitStatus":true},"messages":[],"validateMessages":{}}
@@ -934,7 +1009,7 @@ class Tickets(object):
             print u"[*]提交订单出错：%s" % e
         return submitStatus
 
-    def queryOrderState(self, repeatSubmitToken):
+    def queryOrderStateWaitTime(self):
         headers = self.headers
         headers['Host'] = 'kyfw.12306.cn'
         headers['Accept'] = "application/json, text/javascript, */*; q=0.01"
@@ -951,7 +1026,7 @@ class Tickets(object):
                   "random":str(int(time.time())),
                   "tourFlag":"dc",
                   "_json_att":"",
-                  "REPEAT_SUBMIT_TOKEN":repeatSubmitToken
+                  "REPEAT_SUBMIT_TOKEN": self.repeatSubmitToken
                   }
         #"text": "{\"validateMessagesShowId\":\"_validatorMessage\",\"status\":true,\"httpstatus\":200,
         # \"data\":{\"queryOrderWaitTimeStatus\":true,\"count\":0,\"waitTime\":4,\"requestId\":1234567890123456786,
@@ -962,17 +1037,26 @@ class Tickets(object):
         #           \"waitCount\":0,\"tourFlag\":\"dc\",\"orderId\":\"E123456789\"},\"messages\":[],\"validateMessages\":{}}"
         response = {}
         orderId = None
+        waitTime = 0
         try:
-            response = self.session.get(url=queryOrderStateUrl, params=queryString, headers=headers)
+            response = self.session.get(url=queryOrderStateWaitTimeUrl, params=queryString, headers=headers)
+            status = loads(response.content)['status']
             orderId = loads(response.content)['data']['orderId']
+            waitTime = loads(response.content)['data']['waitTime']
+            if waitTime:
+                waitTime = int(waitTime) / 60
         except BaseException, e:
             pass
         while not orderId:
             try:
-                print u"[*]查询订单状态..."
+                print u"[*]订单排队中，预计等待时间: %s 分钟..." % waitTime
                 time.sleep(1)
-                response = self.session.get(url=queryOrderStateUrl, params=queryString, headers=headers)
+                queryString["random"] = str(int(time.time())),
+                response = self.session.get(url=queryOrderStateWaitTimeUrl, params=queryString, headers=headers)
                 orderId = loads(response.content)['data']['orderId']
+                waitTime = loads(response.content)['data']['waitTime']
+                if waitTime:
+                    waitTime = int(waitTime) / 60
             except KeyboardInterrupt, e:
                 print u"[*]中断查询（%s）" % response.content
                 return orderId
@@ -980,6 +1064,46 @@ class Tickets(object):
                 pass
         print u"[*]订单 [%s] 创建成功!" % orderId
         return orderId
+
+    def resultOrderForDcQueue(self, orderId):
+        print u"[*]Finalize order..."
+        headers = self.headers
+        headers['Host'] = 'kyfw.12306.cn'
+        headers['Accept'] = "application/json, text/javascript, */*; q=0.01"
+        headers["Accept-Language"] = "zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2"
+        headers["Accept-Encoding"] = "gzip, deflate, br"
+        headers["Referer"] =  "https://kyfw.12306.cn/otn/confirmPassenger/initDc"
+        headers['Content-Type'] = """application/x-www-form-urlencoded; charset=UTF-8"""
+        headers["X-Requested-With"] = "XMLHttpRequest"
+        headers['DNT'] = '1'
+        headers["Connection"] = "keep-alive"
+        data = {
+                  "_json_att":"",
+                  "orderSequence_no": orderId,
+                  "REPEAT_SUBMIT_TOKEN": self.repeatSubmitToken
+                  }
+        # {"validateMessagesShowId":"_validatorMessage","status":true,"httpstatus":200,"data":{"submitStatus":true},"messages":[],"validateMessages":{}}
+        response = {}
+        status = None
+        submitStatus = None
+        try:
+            response = self.session.post(url=resultOrderForDcQueueUrl, data=data, headers=headers, verify=False)
+            submitStatus = loads(response.content)['data']['submitStatus']
+        except BaseException, e:
+            pass
+        while not submitStatus:
+            try:
+                print u"[*]查询订单状态..."
+                time.sleep(2)
+                response = self.session.post(url=resultOrderForDcQueueUrl, data=data, headers=headers, verify=False)
+                submitStatus = loads(response.content)['data']['submitStatus']
+            except KeyboardInterrupt, e:
+                print u"[*]中断查询（%s）" % response.content
+                return submitStatus
+            except BaseException, e:
+                pass
+        print u"[*]订单 [%s] 创建成功!" % orderId
+        return submitStatus
 
     def logout(self):
         headers = self.headers
