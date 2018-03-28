@@ -1,0 +1,6 @@
+[submodule "minidb"]
+	path = minidb
+	url = https://github.com/tengjp/minidb.git
+[submodule "hellow-world"]
+	path = hellow-world
+	url = https://github.com/tengjp/hellow-world.git
